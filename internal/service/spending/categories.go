@@ -55,18 +55,17 @@ func (s *Service) CategoriesQuery(ctx context.Context, update tgbotapi.Update) (
 
 	var inlineKeyboardRows []*client.KeyboardRow
 	inlineKeyboardRow := client.NewKeyboardRow()
-	msg := "Command not found"
 
 	switch update.CallbackQuery.Data {
 	case "categories_home":
-		msg = "Choose categories command:"
+		msg := "Choose categories command:"
 		inlineKeyboardRow.Add("Add", "categories_add")
 		inlineKeyboardRow.Add("List", "categories_list")
 		inlineKeyboardRows = append(inlineKeyboardRows, inlineKeyboardRow)
 		err = s.client.SendCallbackQuery(inlineKeyboardRows, msg,
 			update.CallbackQuery.Message.MessageID, update.CallbackQuery.Message.Chat.ID)
 	case "categories_list":
-		msg = "Categories list:"
+		msg := "Categories list:"
 		categories := s.repos.Categories(ctx)
 		for _, category := range categories {
 			inlineKeyboardRow.Add(category.Title, "categories_id_"+strconv.Itoa(category.Id))
@@ -77,7 +76,7 @@ func (s *Service) CategoriesQuery(ctx context.Context, update tgbotapi.Update) (
 		err = s.client.SendCallbackQuery(inlineKeyboardRows, msg,
 			update.CallbackQuery.Message.MessageID, update.CallbackQuery.Message.Chat.ID)
 	case "categories_add":
-		msg = "Write `/categoryadd Food` to added category"
+		msg := "Write `/categoryadd Food` to added category"
 		err = s.client.SendMessage(msg, update.CallbackQuery.Message.Chat.ID)
 	}
 

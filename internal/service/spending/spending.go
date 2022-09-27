@@ -122,7 +122,6 @@ func (s *Service) SpendingAddQuery(ctx context.Context, update tgbotapi.Update) 
 
 	var inlineKeyboardRows []*client.KeyboardRow
 	inlineKeyboardRow := client.NewKeyboardRow()
-	msg := "Command not found"
 
 	eventSer := update.CallbackQuery.Data[len(spendingAddPrefix):]
 	event, err := eventUnserialize(eventSer)
@@ -157,7 +156,7 @@ func (s *Service) SpendingAddQuery(ctx context.Context, update tgbotapi.Update) 
 	} else if event.M > -1 {
 		// show days
 		firstMonth := time.Date(2006, time.Month(event.M), 1, 0, 0, 0, 0, time.Local)
-		msg = fmt.Sprintf("Choose days (*%v* > *%s* > *%d* > *%s*):",
+		msg := fmt.Sprintf("Choose days (*%v* > *%s* > *%d* > *%s*):",
 			event.Price, category.Title, event.Y, firstMonth.Format("Jan"))
 		t := time.Date(event.Y, time.Month(event.M)+1, 0, 0, 0, 0, 0, time.Local)
 		countDays := t.Day()
@@ -178,7 +177,7 @@ func (s *Service) SpendingAddQuery(ctx context.Context, update tgbotapi.Update) 
 	} else if event.Y > -1 {
 		// show months
 		firstMonth := time.Date(2006, 1, 1, 0, 0, 0, 0, time.Local)
-		msg = fmt.Sprintf("Choose months (*%v* > *%s* > *%d*):",
+		msg := fmt.Sprintf("Choose months (*%v* > *%s* > *%d*):",
 			event.Price, category.Title, event.Y)
 		for i := 1; i <= 12; i++ {
 			m := firstMonth.Format("Jan")
@@ -198,7 +197,7 @@ func (s *Service) SpendingAddQuery(ctx context.Context, update tgbotapi.Update) 
 			update.CallbackQuery.Message.MessageID, update.CallbackQuery.Message.Chat.ID)
 	} else if event.SelectedToday {
 		// show years
-		msg = fmt.Sprintf("Choose years (*%v* > *%s*):", event.Price, category.Title)
+		msg := fmt.Sprintf("Choose years (*%v* > *%s*):", event.Price, category.Title)
 		years := []int{now.Year() - 1, now.Year(), now.Year() + 1}
 		for _, year := range years {
 			event.Y = year
@@ -216,7 +215,7 @@ func (s *Service) SpendingAddQuery(ctx context.Context, update tgbotapi.Update) 
 			update.CallbackQuery.Message.MessageID, update.CallbackQuery.Message.Chat.ID)
 	} else if event.CategoryId > -1 {
 		// choose date
-		msg = fmt.Sprintf("Choose date (*%v* > *%s*):", event.Price, category.Title)
+		msg := fmt.Sprintf("Choose date (*%v* > *%s*):", event.Price, category.Title)
 		event.Today = true
 		event.SelectedToday = true
 		event.D = now.Day()
@@ -240,7 +239,7 @@ func (s *Service) SpendingAddQuery(ctx context.Context, update tgbotapi.Update) 
 			update.CallbackQuery.Message.MessageID, update.CallbackQuery.Message.Chat.ID)
 	} else if event.Price > 0 {
 		// show categories
-		msg = fmt.Sprintf("Choose category (*%v*):", event.Price)
+		msg := fmt.Sprintf("Choose category (*%v*):", event.Price)
 		categories := s.repos.Categories(ctx)
 		if len(categories) == 0 {
 			_ = s.client.SendMessage(
