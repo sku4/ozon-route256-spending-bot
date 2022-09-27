@@ -16,12 +16,19 @@ type Spending interface {
 	SpendingAdd(context.Context, tgbotapi.Update) error
 	SpendingAddQuery(context.Context, tgbotapi.Update) error
 	Categories
+	Report
 }
 
 type Categories interface {
 	Categories(context.Context, tgbotapi.Update) error
 	CategoryAdd(context.Context, tgbotapi.Update) error
 	CategoriesQuery(context.Context, tgbotapi.Update) error
+}
+
+type Report interface {
+	Report7(context.Context, tgbotapi.Update) error
+	Report31(context.Context, tgbotapi.Update) error
+	Report365(context.Context, tgbotapi.Update) error
 }
 
 type Service struct {

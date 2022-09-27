@@ -17,6 +17,12 @@ func (h *Handler) IncomingMessage(update tgbotapi.Update) (err error) {
 				err = h.services.Spending.CategoryAdd(h.ctx, update)
 			case "spendingadd":
 				err = h.services.Spending.SpendingAdd(h.ctx, update)
+			case "report7":
+				err = h.services.Spending.Report7(h.ctx, update)
+			case "report31":
+				err = h.services.Spending.Report31(h.ctx, update)
+			case "report365":
+				err = h.services.Spending.Report365(h.ctx, update)
 			default:
 				err = h.services.Spending.NotFound(h.ctx, update)
 			}

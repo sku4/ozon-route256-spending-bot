@@ -34,7 +34,7 @@ func (s *Service) CategoryAdd(ctx context.Context, update tgbotapi.Update) (err 
 
 	title := update.Message.CommandArguments()
 	if title == "" {
-		_ = s.client.SendMessage("Category title is empty, please select title", update.Message.Chat.ID)
+		_ = s.client.SendMessage("Category title is empty, please set title", update.Message.Chat.ID)
 		return errors.Wrap(err, "category title is empty")
 	}
 	_, err = s.repos.AddCategory(ctx, title)

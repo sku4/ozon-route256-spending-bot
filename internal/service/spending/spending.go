@@ -54,8 +54,11 @@ func (s *Service) Start(ctx context.Context, update tgbotapi.Update) (err error)
 
 	msg := "Available commands:\n" +
 		"/categories\n" +
-		"/categoryadd Food\n" +
-		"/spendingadd 100 - where 100 is price"
+		"`/categoryadd Food` _- where Food is category name_\n" +
+		"`/spendingadd 100` _- where 100 is price_\n" +
+		"/report7 _- report by current week_\n" +
+		"/report31 _- report by current month_\n" +
+		"/report365 _- report by current year_"
 	err = s.client.SendMessage(msg, update.Message.Chat.ID)
 	if err != nil {
 		return err
@@ -86,7 +89,7 @@ func (s *Service) SpendingAdd(ctx context.Context, update tgbotapi.Update) (err 
 		return errors.Wrap(err, "convert price")
 	}
 	if price <= 0 {
-		_ = s.client.SendMessage("Please select price over 0", update.Message.Chat.ID)
+		_ = s.client.SendMessage("Please set price over 0", update.Message.Chat.ID)
 		return errors.New("Price less than 0")
 	}
 
@@ -160,13 +163,13 @@ func (s *Service) SpendingAddQuery(ctx context.Context, update tgbotapi.Update) 
 		countDays := t.Day()
 		for i := 1; i <= countDays; i++ {
 			event.D = i
-			eventSer := eventSerialize(event)
+			eventSer = eventSerialize(event)
 			inlineKeyboardRow.Add(strconv.Itoa(i), spendingAddPrefix+string(eventSer))
 		}
 
 		event.D = -1
 		event.M = -1
-		eventSer := eventSerialize(event)
+		eventSer = eventSerialize(event)
 		inlineKeyboardRow2 := client.NewKeyboardRow()
 		inlineKeyboardRow2.Add("<< Back", spendingAddPrefix+string(eventSer))
 		inlineKeyboardRows = append(inlineKeyboardRows, inlineKeyboardRow, inlineKeyboardRow2)
@@ -181,13 +184,13 @@ func (s *Service) SpendingAddQuery(ctx context.Context, update tgbotapi.Update) 
 			m := firstMonth.Format("Jan")
 			firstMonth = firstMonth.AddDate(0, 1, 0)
 			event.M = i
-			eventSer := eventSerialize(event)
+			eventSer = eventSerialize(event)
 			inlineKeyboardRow.Add(m, spendingAddPrefix+string(eventSer))
 		}
 
 		event.M = -1
 		event.Y = -1
-		eventSer := eventSerialize(event)
+		eventSer = eventSerialize(event)
 		inlineKeyboardRow2 := client.NewKeyboardRow()
 		inlineKeyboardRow2.Add("<< Back", spendingAddPrefix+string(eventSer))
 		inlineKeyboardRows = append(inlineKeyboardRows, inlineKeyboardRow, inlineKeyboardRow2)
@@ -199,13 +202,13 @@ func (s *Service) SpendingAddQuery(ctx context.Context, update tgbotapi.Update) 
 		years := []int{now.Year() - 1, now.Year(), now.Year() + 1}
 		for _, year := range years {
 			event.Y = year
-			eventSer := eventSerialize(event)
+			eventSer = eventSerialize(event)
 			inlineKeyboardRow.Add(strconv.Itoa(year), spendingAddPrefix+string(eventSer))
 		}
 
 		event.Y = -1
 		event.SelectedToday = false
-		eventSer := eventSerialize(event)
+		eventSer = eventSerialize(event)
 		inlineKeyboardRow2 := client.NewKeyboardRow()
 		inlineKeyboardRow2.Add("<< Back", spendingAddPrefix+string(eventSer))
 		inlineKeyboardRows = append(inlineKeyboardRows, inlineKeyboardRow, inlineKeyboardRow2)
@@ -219,7 +222,7 @@ func (s *Service) SpendingAddQuery(ctx context.Context, update tgbotapi.Update) 
 		event.D = now.Day()
 		event.M = int(now.Month())
 		event.Y = now.Year()
-		eventSer := eventSerialize(event)
+		eventSer = eventSerialize(event)
 		inlineKeyboardRow.Add("Today", spendingAddPrefix+string(eventSer))
 		event.Today = false
 		event.D = -1
@@ -244,10 +247,10 @@ func (s *Service) SpendingAddQuery(ctx context.Context, update tgbotapi.Update) 
 				"Categories list is empty, please add /categories", update.CallbackQuery.Message.Chat.ID)
 			return errors.New("Categories list is empty")
 		}
-		for _, category := range categories {
-			event.CategoryId = category.Id
-			eventSer := eventSerialize(event)
-			inlineKeyboardRow.Add(category.Title, spendingAddPrefix+string(eventSer))
+		for _, c := range categories {
+			event.CategoryId = c.Id
+			eventSer = eventSerialize(event)
+			inlineKeyboardRow.Add(c.Title, spendingAddPrefix+string(eventSer))
 		}
 		inlineKeyboardRows = append(inlineKeyboardRows, inlineKeyboardRow)
 		err = s.client.SendCallbackQuery(inlineKeyboardRows, msg,
