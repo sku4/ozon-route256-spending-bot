@@ -82,7 +82,7 @@ func (s *Service) SpendingAdd(ctx context.Context, update tgbotapi.Update) (err 
 	_ = ctx
 
 	priceArg := update.Message.CommandArguments()
-	price, err := strconv.ParseFloat(priceArg, 2)
+	price, err := strconv.ParseFloat(priceArg, 64)
 	if err != nil {
 		_ = s.client.SendMessage(fmt.Sprintf(
 			"Error convert price '*%s*'", priceArg), update.Message.Chat.ID)
