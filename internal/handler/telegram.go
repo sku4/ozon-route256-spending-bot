@@ -2,13 +2,28 @@ package handler
 
 import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
+	"strings"
 )
 
-func (h *Handler) IncomingMessage(update tgbotapi.Update) error {
-	err := h.services.Spending.Start(h.ctx, update)
-	if err != nil {
-		return err
+func (h *Handler) IncomingMessage(update tgbotapi.Update) (err error) {
+	if update.Message != nil {
+		if update.Message.IsCommand() {
+			switch update.Message.Command() {
+			case "start":
+				err = h.services.Spending.Start(h.ctx, update)
+			case "categories":
+				err = h.services.Spending.Categories(h.ctx, update)
+			case "categoryadd":
+				err = h.services.Spending.CategoryAdd(h.ctx, update)
+			default:
+				err = h.services.Spending.NotFound(h.ctx, update)
+			}
+		}
+	} else if update.CallbackQuery != nil {
+		if strings.Index(update.CallbackQuery.Data, "categories") > -1 {
+			err = h.services.Spending.CategoriesQuery(h.ctx, update)
+		}
 	}
 
-	return nil
+	return
 }

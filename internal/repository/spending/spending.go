@@ -1,11 +1,9 @@
 package spending
 
 type Spending struct {
-	//*spending.Client
+	categories []Category
 }
 
 func NewSpending() *Spending {
-	return &Spending{
-		//Client: spending.NewClient(),
-	}
+	return &Spending{}
 }
