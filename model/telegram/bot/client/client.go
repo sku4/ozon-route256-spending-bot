@@ -78,18 +78,23 @@ func (c *Client) SendCallbackQuery(keyboardRows []*KeyboardRow,
 	message string, messageId int, chatId int64) error {
 	_ = message
 
-	msgMarkup := tgbotapi.NewEditMessageReplyMarkup(chatId, messageId, getInlineKeyboard(keyboardRows))
-	if _, err := c.client.Send(msgMarkup); err != nil {
+	msgEdit := tgbotapi.NewEditMessageText(chatId, messageId, message)
+	msgEdit.ParseMode = tgbotapi.ModeMarkdown
+	msgEdit.DisableWebPagePreview = true
+	msgEdit.ReplyMarkup = getInlineKeyboard(keyboardRows)
+
+	if _, err := c.client.Send(msgEdit); err != nil {
 		return errors.Wrap(err, "send markup callback query")
 	}
 
 	return nil
 }
 
-func getInlineKeyboard(inlineKeyboardRows []*KeyboardRow) tgbotapi.InlineKeyboardMarkup {
+func getInlineKeyboard(inlineKeyboardRows []*KeyboardRow) *tgbotapi.InlineKeyboardMarkup {
 	var keyboardButtons [][]tgbotapi.InlineKeyboardButton
 	for _, row := range inlineKeyboardRows {
-		var inlineRow []tgbotapi.InlineKeyboardButton
+		maxButtons := 8
+		inlineRow := make([]tgbotapi.InlineKeyboardButton, 0, maxButtons)
 		for _, b := range row.buttons {
 			switch b.t {
 			case KeyboardButtonTypeSwitch:
@@ -97,11 +102,22 @@ func getInlineKeyboard(inlineKeyboardRows []*KeyboardRow) tgbotapi.InlineKeyboar
 			default:
 				inlineRow = append(inlineRow, tgbotapi.NewInlineKeyboardButtonData(b.k, b.v))
 			}
+			if len(inlineRow) == maxButtons {
+				keyboardButtons = append(keyboardButtons, inlineRow)
+				inlineRow = make([]tgbotapi.InlineKeyboardButton, 0, maxButtons)
+			}
 		}
 		if len(inlineRow) > 0 {
 			keyboardButtons = append(keyboardButtons, inlineRow)
 		}
 	}
 
-	return tgbotapi.NewInlineKeyboardMarkup(keyboardButtons...)
+	if len(keyboardButtons) == 0 {
+		inlineRow := make([]tgbotapi.InlineKeyboardButton, 0)
+		keyboardButtons = append(keyboardButtons, inlineRow)
+	}
+
+	return &tgbotapi.InlineKeyboardMarkup{
+		InlineKeyboard: keyboardButtons,
+	}
 }

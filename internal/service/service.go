@@ -12,10 +12,16 @@ import (
 
 type Spending interface {
 	Start(context.Context, tgbotapi.Update) error
+	NotFound(context.Context, tgbotapi.Update) error
+	SpendingAdd(context.Context, tgbotapi.Update) error
+	SpendingAddQuery(context.Context, tgbotapi.Update) error
+	Categories
+}
+
+type Categories interface {
 	Categories(context.Context, tgbotapi.Update) error
 	CategoryAdd(context.Context, tgbotapi.Update) error
 	CategoriesQuery(context.Context, tgbotapi.Update) error
-	NotFound(context.Context, tgbotapi.Update) error
 }
 
 type Service struct {
