@@ -6,7 +6,16 @@ import (
 	"github.com/pkg/errors"
 )
 
+//go:generate mockgen -source=client.go -destination=mocks/client.go
+
+type BotClient interface {
+	SendMessage(string, int64) error
+	SendInlineKeyboard([]*KeyboardRow, string, int64) error
+	SendCallbackQuery([]*KeyboardRow, string, int, int64) error
+}
+
 type Client struct {
+	BotClient
 	client *tgbotapi.BotAPI
 	ctx    context.Context
 }
@@ -15,6 +24,10 @@ const KeyboardButtonTypeSwitch = "switch"
 
 type KeyboardRow struct {
 	buttons []KeyboardButton
+}
+
+type KeyboardButton struct {
+	k, v, t string
 }
 
 func NewKeyboardRow() *KeyboardRow {
@@ -36,10 +49,6 @@ func (i *KeyboardRow) AddSwitch(k, v string) {
 	})
 }
 
-type KeyboardButton struct {
-	k, v, t string
-}
-
 func NewClient(ctx context.Context, client *tgbotapi.BotAPI) (*Client, error) {
 	return &Client{
 		ctx:    ctx,
@@ -47,8 +56,8 @@ func NewClient(ctx context.Context, client *tgbotapi.BotAPI) (*Client, error) {
 	}, nil
 }
 
-func (c *Client) SendMessage(message string, chatID int64) error {
-	msg := tgbotapi.NewMessage(chatID, message)
+func (c *Client) SendMessage(message string, chatId int64) error {
+	msg := tgbotapi.NewMessage(chatId, message)
 	msg.ParseMode = tgbotapi.ModeMarkdown
 	msg.DisableWebPagePreview = true
 

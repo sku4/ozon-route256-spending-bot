@@ -35,7 +35,7 @@ type Service struct {
 	Spending
 }
 
-func NewService(repos *repository.Repository, client *client.Client) *Service {
+func NewService(repos *repository.Repository, client client.BotClient) *Service {
 	return &Service{
 		Spending: spending.NewService(repos.Spending, client),
 	}

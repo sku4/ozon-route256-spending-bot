@@ -4,6 +4,7 @@ go 1.19
 
 require (
 	github.com/go-telegram-bot-api/telegram-bot-api v4.6.4+incompatible
+	github.com/golang/mock v1.4.4
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/viper v1.13.0
 	go.uber.org/zap v1.23.0
