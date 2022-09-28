@@ -151,7 +151,7 @@ func (s *Service) SpendingAddQuery(ctx context.Context, update tgbotapi.Update) 
 		}
 		err = s.client.SendCallbackQuery(inlineKeyboardRows, fmt.Sprintf(
 			"Event with price *%v* on *%s* success added to *%s*\r\n"+
-				"Show /report7 /report31 /report365", event.Price, t.Format("02 Jan 06"), category.Title),
+				"Show /report7 /report31 /report365", event.Price, t.Format("2 Jan 06"), category.Title),
 			update.CallbackQuery.Message.MessageID, update.CallbackQuery.Message.Chat.ID)
 	} else if event.M > -1 {
 		// show days
@@ -185,6 +185,10 @@ func (s *Service) SpendingAddQuery(ctx context.Context, update tgbotapi.Update) 
 			event.M = i
 			eventSer = eventSerialize(event)
 			inlineKeyboardRow.Add(m, spendingAddPrefix+string(eventSer))
+			if i == 6 {
+				inlineKeyboardRows = append(inlineKeyboardRows, inlineKeyboardRow)
+				inlineKeyboardRow = client.NewKeyboardRow()
+			}
 		}
 
 		event.M = -1

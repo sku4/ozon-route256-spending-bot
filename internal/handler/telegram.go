@@ -9,7 +9,7 @@ func (h *Handler) IncomingMessage(update tgbotapi.Update) (err error) {
 	if update.Message != nil {
 		if update.Message.IsCommand() {
 			switch update.Message.Command() {
-			case "start":
+			case "start", "help":
 				err = h.services.Spending.Start(h.ctx, update)
 			case "categories":
 				err = h.services.Spending.Categories(h.ctx, update)

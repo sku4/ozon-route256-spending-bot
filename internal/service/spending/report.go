@@ -5,7 +5,6 @@ import (
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/spending"
 	"time"
 )
 
@@ -102,13 +101,8 @@ func buildReport(ctx context.Context, repos repository.Spending, f1, f2 time.Tim
 	}
 
 	categories := repos.Categories(ctx)
-	c := make(map[int]spending.Category)
 	for _, category := range categories {
-		c[category.Id] = category
-	}
-
-	for categoryId, sum := range m {
-		if category, ok := c[categoryId]; ok {
+		if sum, ok := m[category.Id]; ok {
 			report += fmt.Sprintf("_%s_ - %.1f\n", category.Title, sum)
 		}
 	}
