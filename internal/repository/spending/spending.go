@@ -2,8 +2,13 @@ package spending
 
 import (
 	"context"
+	"fmt"
 	"github.com/pkg/errors"
 	"time"
+)
+
+const (
+	decimalFactor float64 = 100
 )
 
 type Spending struct {
@@ -15,7 +20,21 @@ type Event struct {
 	Id       int
 	Category Category
 	Date     time.Time
-	Price    float64
+	Price    PriceFloat64
+}
+
+type PriceFloat64 int64
+
+func (p PriceFloat64) Original() int64 {
+	return int64(p)
+}
+
+func (p PriceFloat64) Float() float64 {
+	return float64(p) / decimalFactor
+}
+
+func (p PriceFloat64) String() string {
+	return fmt.Sprintf("%.2f", float64(p)/decimalFactor)
 }
 
 func NewSpending() *Spending {
@@ -43,7 +62,7 @@ func (s *Spending) AddEvent(ctx context.Context, categoryId int, date time.Time,
 		Id:       genEventId(),
 		Category: category,
 		Date:     date,
-		Price:    price,
+		Price:    Float64ToPrice(price),
 	})
 
 	return s.Events(ctx), nil
@@ -67,3 +86,7 @@ var genEventId = func() func() int {
 		return c
 	}
 }()
+
+func Float64ToPrice(f float64) PriceFloat64 {
+	return PriceFloat64(f * decimalFactor)
+}
