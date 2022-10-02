@@ -10,31 +10,46 @@ type Category struct {
 	Title string
 }
 
-func (s Spending) Categories(context.Context) []Category {
-	return s.categories
+func (s Spending) Categories(context.Context) (c []Category) {
+	s.mutex.RLock()
+	c = s.categories
+	s.mutex.RUnlock()
+
+	return
 }
 
 func (s *Spending) AddCategory(ctx context.Context, title string) ([]Category, error) {
+	s.mutex.RLock()
+	categoryFound := false
 	for _, category := range s.categories {
 		if strings.EqualFold(category.Title, title) {
-			return s.Categories(ctx), nil
+			categoryFound = true
+			break
 		}
 	}
+	s.mutex.RUnlock()
+	if categoryFound {
+		return s.Categories(ctx), nil
+	}
+	s.mutex.Lock()
 	s.categories = append(s.categories, Category{
 		Id:    genCategoryId(),
 		Title: title,
 	})
+	s.mutex.Unlock()
 
 	return s.Categories(ctx), nil
 }
 
 func (s *Spending) DeleteCategory(ctx context.Context, id int) ([]Category, error) {
+	s.mutex.Lock()
 	for i, category := range s.categories {
 		if category.Id == id {
 			s.categories = append(s.categories[0:i], s.categories[i+1:]...)
 			break
 		}
 	}
+	s.mutex.Unlock()
 
 	return s.Categories(ctx), nil
 }

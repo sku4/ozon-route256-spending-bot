@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/pkg/errors"
+	"sync"
 	"time"
 )
 
@@ -14,6 +15,7 @@ const (
 type Spending struct {
 	categories []Category
 	events     []Event
+	mutex      *sync.RWMutex
 }
 
 type Event struct {
@@ -41,13 +43,18 @@ func NewSpending() *Spending {
 	return &Spending{}
 }
 
-func (s Spending) Events(context.Context) []Event {
-	return s.events
+func (s Spending) Events(context.Context) (e []Event) {
+	s.mutex.RLock()
+	e = s.events
+	s.mutex.RUnlock()
+
+	return e
 }
 
 func (s *Spending) AddEvent(ctx context.Context, categoryId int, date time.Time, price float64) ([]Event, error) {
 	var category Category
 	categoryFound := false
+	s.mutex.RLock()
 	for _, c := range s.categories {
 		if c.Id == categoryId {
 			category = c
@@ -55,26 +62,31 @@ func (s *Spending) AddEvent(ctx context.Context, categoryId int, date time.Time,
 			break
 		}
 	}
+	s.mutex.RUnlock()
 	if !categoryFound {
 		return nil, errors.New("category not found")
 	}
+	s.mutex.Lock()
 	s.events = append(s.events, Event{
 		Id:       genEventId(),
 		Category: category,
 		Date:     date,
 		Price:    Float64ToPrice(price),
 	})
+	s.mutex.Unlock()
 
 	return s.Events(ctx), nil
 }
 
 func (s *Spending) DeleteEvent(ctx context.Context, id int) ([]Event, error) {
+	s.mutex.Lock()
 	for i, event := range s.events {
 		if event.Id == id {
 			s.events = append(s.events[0:i], s.events[i+1:]...)
 			break
 		}
 	}
+	s.mutex.Unlock()
 
 	return s.Events(ctx), nil
 }
