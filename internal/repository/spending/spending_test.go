@@ -23,13 +23,13 @@ func TestSpending_AddDeleteEvents(t *testing.T) {
 				Id:       0,
 				Category: category,
 				Date:     now,
-				Price:    15.6,
+				Price:    Float64ToPrice(15.6),
 			},
 			{
 				Id:       1,
 				Category: category,
 				Date:     next,
-				Price:    50,
+				Price:    Float64ToPrice(50),
 			},
 		}
 		if !reflect.DeepEqual(got, wantEvents) {
@@ -41,7 +41,7 @@ func TestSpending_AddDeleteEvents(t *testing.T) {
 				Id:       1,
 				Category: category,
 				Date:     next,
-				Price:    50,
+				Price:    Float64ToPrice(50),
 			},
 		}
 		if !reflect.DeepEqual(got, wantEvents) {

@@ -40,7 +40,9 @@ func (p PriceFloat64) String() string {
 }
 
 func NewSpending() *Spending {
-	return &Spending{}
+	return &Spending{
+		mutex: &sync.RWMutex{},
+	}
 }
 
 func (s Spending) Events(context.Context) (e []Event) {
