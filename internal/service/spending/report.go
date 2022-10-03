@@ -5,7 +5,6 @@ import (
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/spending"
 	"time"
 )
 
@@ -93,18 +92,12 @@ func (s *Service) Report365(ctx context.Context, update tgbotapi.Update) (err er
 
 func buildReport(ctx context.Context, repos repository.Spending, f1, f2 time.Time) string {
 	report := ""
-	m := make(map[int]spending.PriceFloat64)
-	events := repos.Events(ctx)
-	for _, event := range events {
-		if (event.Date.After(f1) || event.Date.Equal(f1)) && (event.Date.Before(f2) || event.Date.Equal(f2)) {
-			m[event.Category.Id] += event.Price
-		}
-	}
+	m := repos.Report(ctx, f1, f2)
 
 	categories := repos.Categories(ctx)
 	for _, category := range categories {
 		if sum, ok := m[category.Id]; ok {
-			report += fmt.Sprintf("_%s_ - %.2f\n", category.Title, sum.Float())
+			report += fmt.Sprintf("_%s_ - %.2f\n", category.Title, sum)
 		}
 	}
 

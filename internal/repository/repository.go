@@ -12,6 +12,7 @@ type Spending interface {
 	Events(context.Context) []spending.Event
 	AddEvent(context.Context, int, time.Time, float64) ([]spending.Event, error)
 	DeleteEvent(context.Context, int) ([]spending.Event, error)
+	Report(context.Context, time.Time, time.Time) map[int]float64
 	Categories
 }
 

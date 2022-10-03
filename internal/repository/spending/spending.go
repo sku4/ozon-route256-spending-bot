@@ -93,6 +93,25 @@ func (s *Spending) DeleteEvent(ctx context.Context, id int) ([]Event, error) {
 	return s.Events(ctx), nil
 }
 
+func (s Spending) Report(ctx context.Context, f1, f2 time.Time) (m map[int]float64) {
+	_ = ctx
+
+	s.mutex.RLock()
+	stat := make(map[int]PriceFloat64)
+	for _, event := range s.events {
+		if (event.Date.After(f1) || event.Date.Equal(f1)) && (event.Date.Before(f2) || event.Date.Equal(f2)) {
+			stat[event.Category.Id] += event.Price
+		}
+	}
+	s.mutex.RUnlock()
+	m = make(map[int]float64)
+	for catId, price := range stat {
+		m[catId] = price.Float()
+	}
+
+	return m
+}
+
 var genEventId = func() func() int {
 	c := -1
 	return func() int {

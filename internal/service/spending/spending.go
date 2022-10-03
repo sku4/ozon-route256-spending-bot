@@ -139,10 +139,10 @@ func (s *Service) SpendingAddQuery(ctx context.Context, update tgbotapi.Update) 
 		}
 	}
 
-	now := time.Now()
+	now := time.Now().UTC()
 	if event.D > -1 {
 		// add event
-		t := time.Date(event.Y, time.Month(event.M), event.D, 0, 0, 0, 0, time.Local)
+		t := time.Date(event.Y, time.Month(event.M), event.D, 0, 0, 0, 0, now.Location())
 		_, err = s.repos.AddEvent(ctx, event.CategoryId, t, event.Price)
 		if err != nil {
 			_ = s.client.SendMessage(fmt.Sprintf(
