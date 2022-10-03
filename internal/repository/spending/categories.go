@@ -27,10 +27,11 @@ func (s *Spending) AddCategory(ctx context.Context, title string) ([]Category, e
 			break
 		}
 	}
-	s.mutex.RUnlock()
 	if categoryFound {
+		s.mutex.RUnlock()
 		return s.Categories(ctx), nil
 	}
+	s.mutex.RUnlock()
 	s.mutex.Lock()
 	s.categories = append(s.categories, Category{
 		Id:    genCategoryId(),

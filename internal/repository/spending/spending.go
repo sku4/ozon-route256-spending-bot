@@ -64,10 +64,11 @@ func (s *Spending) AddEvent(ctx context.Context, categoryId int, date time.Time,
 			break
 		}
 	}
-	s.mutex.RUnlock()
 	if !categoryFound {
+		s.mutex.RUnlock()
 		return nil, errors.New("category not found")
 	}
+	s.mutex.RUnlock()
 	s.mutex.Lock()
 	s.events = append(s.events, Event{
 		Id:       genEventId(),
