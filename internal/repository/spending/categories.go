@@ -19,7 +19,7 @@ func (s Spending) Categories(context.Context) (c []Category) {
 }
 
 func (s *Spending) AddCategory(ctx context.Context, title string) ([]Category, error) {
-	s.mutex.RLock()
+	s.mutex.Lock()
 	categoryFound := false
 	for _, category := range s.categories {
 		if strings.EqualFold(category.Title, title) {
@@ -28,11 +28,9 @@ func (s *Spending) AddCategory(ctx context.Context, title string) ([]Category, e
 		}
 	}
 	if categoryFound {
-		s.mutex.RUnlock()
+		s.mutex.Unlock()
 		return s.Categories(ctx), nil
 	}
-	s.mutex.RUnlock()
-	s.mutex.Lock()
 	s.categories = append(s.categories, Category{
 		Id:    genCategoryId(),
 		Title: title,

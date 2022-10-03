@@ -56,7 +56,7 @@ func (s Spending) Events(context.Context) (e []Event) {
 func (s *Spending) AddEvent(ctx context.Context, categoryId int, date time.Time, price float64) ([]Event, error) {
 	var category Category
 	categoryFound := false
-	s.mutex.RLock()
+	s.mutex.Lock()
 	for _, c := range s.categories {
 		if c.Id == categoryId {
 			category = c
@@ -65,11 +65,9 @@ func (s *Spending) AddEvent(ctx context.Context, categoryId int, date time.Time,
 		}
 	}
 	if !categoryFound {
-		s.mutex.RUnlock()
+		s.mutex.Unlock()
 		return nil, errors.New("category not found")
 	}
-	s.mutex.RUnlock()
-	s.mutex.Lock()
 	s.events = append(s.events, Event{
 		Id:       genEventId(),
 		Category: category,
