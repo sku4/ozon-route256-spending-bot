@@ -7,6 +7,7 @@ import (
 	"gitlab.ozon.dev/skubach/workshop-1-bot/configs"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/handler"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/currency"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/service"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/model/telegram/bot/client"
 	tg "gitlab.ozon.dev/skubach/workshop-1-bot/model/telegram/bot/server"
@@ -41,8 +42,11 @@ func main() {
 		sugar.Fatalf("error init telegram bot: %s", err.Error())
 	}
 
+	rates := currency.NewRates()
+	rates.UpdateRatesSync(ctx)
+
 	repos := repository.NewRepository()
-	services := service.NewService(repos, tgClient)
+	services := service.NewService(repos, tgClient, rates)
 	handlers := handler.NewHandler(ctx, services)
 
 	quit := make(chan os.Signal, 1)

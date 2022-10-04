@@ -4,6 +4,8 @@ import (
 	"context"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/currency"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/service/middleware"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/service/spending"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/model/telegram/bot/client"
 )
@@ -31,12 +33,19 @@ type Report interface {
 	Report365(context.Context, tgbotapi.Update) error
 }
 
-type Service struct {
-	Spending
+type Middleware interface {
+	DefineUser(context.Context, tgbotapi.Update) (context.Context, error)
+	UpdateRates(context.Context)
 }
 
-func NewService(repos *repository.Repository, client client.BotClient) *Service {
+type Service struct {
+	Spending
+	Middleware
+}
+
+func NewService(repos *repository.Repository, client client.BotClient, rates *currency.Rates) *Service {
 	return &Service{
-		Spending: spending.NewService(repos.Spending, client),
+		Spending:   spending.NewService(repos.Spending, client, rates),
+		Middleware: middleware.NewMiddleware(repos.Users, rates, client),
 	}
 }

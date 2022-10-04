@@ -6,6 +6,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/pkg/errors"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/currency"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/spending"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/model/telegram/bot/client"
 	"strconv"
@@ -18,6 +19,7 @@ import (
 type Service struct {
 	repos  repository.Spending
 	client client.BotClient
+	rates  *currency.Rates
 }
 
 type Event struct {
@@ -40,10 +42,11 @@ func NewEvent(price float64) *Event {
 	}
 }
 
-func NewService(repos repository.Spending, client client.BotClient) *Service {
+func NewService(repos repository.Spending, client client.BotClient, rates *currency.Rates) *Service {
 	return &Service{
 		repos:  repos,
 		client: client,
+		rates:  rates,
 	}
 }
 

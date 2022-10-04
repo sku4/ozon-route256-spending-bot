@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/pkg/errors"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/currency"
 	"sync"
 	"time"
 )
@@ -23,6 +24,7 @@ type Event struct {
 	Category Category
 	Date     time.Time
 	Price    PriceFloat64
+	Currency currency.Currency
 }
 
 type PriceFloat64 int64

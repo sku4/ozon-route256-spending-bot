@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/spending"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/user"
 	"time"
 )
 
@@ -22,12 +23,25 @@ type Categories interface {
 	DeleteCategory(context.Context, int) ([]spending.Category, error)
 }
 
+type Users interface {
+	AddUser(int) *user.User
+	GetUserById(int) (*user.User, error)
+}
+
+type Rates interface {
+	UpdateRates(context.Context) error
+	UpdateRatesSync(context.Context)
+}
+
 type Repository struct {
 	Spending
+	Users
+	Rates
 }
 
 func NewRepository() *Repository {
 	return &Repository{
 		Spending: spending.NewSpending(),
+		Users:    user.NewUsers(),
 	}
 }
