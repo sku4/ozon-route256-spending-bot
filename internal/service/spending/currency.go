@@ -30,8 +30,7 @@ func (s *Service) Currency(ctx context.Context, update tgbotapi.Update) (err err
 	}
 	inlineKeyboardRows = append(inlineKeyboardRows, inlineKeyboardRow)
 
-	err = s.client.SendInlineKeyboard(inlineKeyboardRows,
-		fmt.Sprint("Change currency:"), update.Message.Chat.ID)
+	err = s.client.SendInlineKeyboard(inlineKeyboardRows, "Change currency:", update.Message.Chat.ID)
 	if err != nil {
 		return err
 	}
@@ -74,6 +73,9 @@ func (s *Service) CurrencyQuery(ctx context.Context, update tgbotapi.Update) (er
 			"Currency success changed to *%s*\r\n"+
 				"Show /report7 /report31 /report365", userCurrAbbr),
 			update.CallbackQuery.Message.MessageID, update.CallbackQuery.Message.Chat.ID)
+		if err != nil {
+			return err
+		}
 	}
 
 	return

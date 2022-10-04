@@ -19,7 +19,7 @@ type User struct {
 }
 
 func NewUsers() *Users {
-	users = make(Users, 0, 0)
+	users = make(Users, 0)
 
 	return &users
 }

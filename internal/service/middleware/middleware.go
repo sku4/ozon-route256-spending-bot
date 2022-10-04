@@ -42,6 +42,4 @@ func (m Middleware) DefineUser(ctx context.Context, update tgbotapi.Update) (con
 
 func (m Middleware) UpdateRates(ctx context.Context) {
 	m.rates.UpdateRatesSync(ctx)
-
-	return
 }
