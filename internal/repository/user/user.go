@@ -24,20 +24,25 @@ func NewUsers() *Users {
 	return &users
 }
 
-func (us *Users) AddUser(id int) *User {
+func (us *Users) AddUser(id int) (u *User, err error) {
 	if u, err := us.GetUserById(id); err == nil {
-		return u
+		return u, nil
 	}
 
 	mutex.Lock()
 	defer mutex.Unlock()
-	u := &User{
+
+	s, err := state.NewState()
+	if err != nil {
+		return nil, errors.Wrap(err, "add user")
+	}
+	u = &User{
 		Id:    id,
-		State: state.NewState(),
+		State: s,
 	}
 	users = append(users, u)
 
-	return u
+	return u, nil
 }
 
 func (us *Users) GetUserById(id int) (u *User, err error) {

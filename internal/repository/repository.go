@@ -25,7 +25,7 @@ type Categories interface {
 }
 
 type Users interface {
-	AddUser(int) *user.User
+	AddUser(int) (*user.User, error)
 	GetUserById(int) (*user.User, error)
 }
 

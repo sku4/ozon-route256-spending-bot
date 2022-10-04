@@ -3,6 +3,7 @@ package middleware
 import (
 	"context"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
+	"github.com/pkg/errors"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/model/telegram/bot/client"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/user"
@@ -30,7 +31,10 @@ func (m Middleware) DefineUser(ctx context.Context, update tgbotapi.Update) (con
 		userId = update.CallbackQuery.From.ID
 	}
 
-	u := m.users.AddUser(userId)
+	u, err := m.users.AddUser(userId)
+	if err != nil {
+		return nil, errors.Wrap(err, "define user")
+	}
 	ctx = user.ToContext(ctx, u)
 
 	return ctx, nil

@@ -25,7 +25,7 @@ type Event struct {
 	Category Category
 	Date     time.Time
 	Price    PriceFloat64
-	Currency currency.Currency
+	Currency *currency.Currency
 }
 
 type PriceFloat64 int64
@@ -106,11 +106,11 @@ func (s Spending) Report(ctx context.Context, f1, f2 time.Time, rates *currency.
 	_ = ctx
 
 	s.mutex.RLock()
-	stat := make(map[int]map[currency.Currency]PriceFloat64)
+	stat := make(map[int]map[*currency.Currency]PriceFloat64)
 	for _, event := range s.events {
 		if (event.Date.After(f1) || event.Date.Equal(f1)) && (event.Date.Before(f2) || event.Date.Equal(f2)) {
 			if _, ok := stat[event.Category.Id]; !ok {
-				stat[event.Category.Id] = make(map[currency.Currency]PriceFloat64)
+				stat[event.Category.Id] = make(map[*currency.Currency]PriceFloat64)
 			}
 			stat[event.Category.Id][event.Currency] += event.Price
 		}

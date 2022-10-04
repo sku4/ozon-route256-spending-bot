@@ -1,13 +1,21 @@
 package state
 
-import "gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/currency"
+import (
+	"github.com/pkg/errors"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/currency"
+)
 
 type State struct {
-	Currency currency.Currency
+	Currency *currency.Currency
 }
 
-func NewState() *State {
-	return &State{
-		Currency: currency.DefaultCurrency,
+func NewState() (s *State, err error) {
+	c, err := currency.GetById(currency.DefaultCurrency)
+	if err != nil {
+		return nil, errors.Wrap(err, "new state")
 	}
+
+	return &State{
+		Currency: c,
+	}, nil
 }

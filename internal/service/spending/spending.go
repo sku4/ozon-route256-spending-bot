@@ -105,7 +105,7 @@ func (s *Service) SpendingAdd(ctx context.Context, update tgbotapi.Update) (err 
 		return errors.Wrap(err, "user not found")
 	}
 
-	userCurrAbbr := currency.CurrAbbr[userCtx.State.Currency]
+	userCurrAbbr := userCtx.State.Currency.Abbr
 
 	var inlineKeyboardRows []*client.KeyboardRow
 	inlineKeyboardRow := client.NewKeyboardRow()
@@ -160,7 +160,7 @@ func (s *Service) SpendingAddQuery(ctx context.Context, update tgbotapi.Update) 
 		return errors.Wrap(err, "user not found")
 	}
 
-	userCurrAbbr := currency.CurrAbbr[userCtx.State.Currency]
+	userCurrAbbr := userCtx.State.Currency.Abbr
 
 	now := time.Now().UTC()
 	if event.D > -1 {

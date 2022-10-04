@@ -25,9 +25,8 @@ func (s *Service) Currency(ctx context.Context, update tgbotapi.Update) (err err
 
 	var inlineKeyboardRows []*client.KeyboardRow
 	inlineKeyboardRow := client.NewKeyboardRow()
-	for id := currency.USD; id <= currency.RUB; id++ {
-		abbr := currency.CurrAbbr[currency.Currency(id)]
-		inlineKeyboardRow.Add(abbr, currencyPrefix+strconv.Itoa(int(id)))
+	for _, c := range currency.All() {
+		inlineKeyboardRow.Add(c.Abbr, currencyPrefix+strconv.Itoa(c.Id))
 	}
 	inlineKeyboardRows = append(inlineKeyboardRows, inlineKeyboardRow)
 
@@ -52,16 +51,15 @@ func (s *Service) CurrencyQuery(ctx context.Context, update tgbotapi.Update) (er
 		return errors.Wrap(err, "currency user not convert")
 	}
 
-	userCurrency := currency.Currency(postfixCur)
-	userCurrAbbr := ""
-	for a, c := range currency.AbbrCurr {
-		if c == userCurrency {
-			userCurrAbbr = a
-			break
-		}
+	userCurrency, err := currency.GetById(postfixCur)
+	if err != nil {
+		_ = s.client.SendMessage(fmt.Sprintf(
+			"Currency not found: %s", err.Error()), update.CallbackQuery.Message.Chat.ID)
+		return errors.Wrap(err, "Currency not found")
 	}
+	userCurrAbbr := userCurrency.Abbr
 
-	if userCurrency > -1 {
+	if userCurrency.Id > -1 {
 		// change currency
 		u, err := user.FromContext(ctx)
 		if err != nil {

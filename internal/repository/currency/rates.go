@@ -20,7 +20,7 @@ const (
 )
 
 type Rate struct {
-	Currency
+	*Currency
 	Rate RateFloat64
 }
 
@@ -35,7 +35,7 @@ func (p RateFloat64) Float() float64 {
 }
 
 type Rates struct {
-	m          map[Currency]*Rate
+	m          map[*Currency]*Rate
 	lastUpdate time.Time
 	loaded     bool
 	mutex      sync.RWMutex
@@ -43,7 +43,7 @@ type Rates struct {
 
 func NewRates() *Rates {
 	return &Rates{
-		m:      make(map[Currency]*Rate),
+		m:      make(map[*Currency]*Rate),
 		loaded: false,
 	}
 }
@@ -57,7 +57,7 @@ func (rs *Rates) IsLoaded(ctx context.Context) bool {
 	return rs.loaded
 }
 
-func (rs *Rates) GetRate(ctx context.Context, currency Currency) (*Rate, bool) {
+func (rs *Rates) GetRate(ctx context.Context, currency *Currency) (*Rate, bool) {
 	_ = ctx
 
 	rs.mutex.RLock()
@@ -101,20 +101,26 @@ func (rs *Rates) UpdateRates(ctx context.Context) (err error) {
 
 	rs.mutex.Lock()
 	rateByn := float64(0)
+	currencyRub, err := GetById(RUB)
+	if err != nil {
+		return errors.Wrap(err, "currency rub")
+	}
 	for _, nbrbRate := range nbrbRates {
-		if nbrbRate.CurAbbreviation == "RUB" {
+		if nbrbRate.CurAbbreviation == currencyRub.Abbr {
 			rateByn = nbrbRate.CurOfficialRate / float64(nbrbRate.CurScale)
 			break
 		}
 	}
 	for _, nbrbRate := range nbrbRates {
-		if currency, ok := AbbrCurr[nbrbRate.CurAbbreviation]; ok {
-			rate := nbrbRate.CurOfficialRate / float64(nbrbRate.CurScale)
-			r := rate / rateByn
-			rs.m[currency] = &Rate{
-				Currency: currency,
-				Rate:     Float64ToRate(r),
-			}
+		currency, err := GetByAbbr(nbrbRate.CurAbbreviation)
+		if err != nil {
+			continue
+		}
+		rate := nbrbRate.CurOfficialRate / float64(nbrbRate.CurScale)
+		r := rate / rateByn
+		rs.m[currency] = &Rate{
+			Currency: currency,
+			Rate:     Float64ToRate(r),
 		}
 	}
 	rs.lastUpdate = time.Now()

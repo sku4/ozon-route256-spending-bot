@@ -113,7 +113,7 @@ func buildReport(ctx context.Context, repos repository.Spending, rates *currency
 	if err != nil {
 		return "", errors.Wrap(err, "user not found")
 	}
-	userCurrAbbr := currency.CurrAbbr[userCtx.State.Currency]
+	userCurrAbbr := userCtx.State.Currency.Abbr
 
 	categories := repos.Categories(ctx)
 	for _, category := range categories {
