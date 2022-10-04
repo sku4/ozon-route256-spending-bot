@@ -61,7 +61,8 @@ func (s *Service) Start(ctx context.Context, update tgbotapi.Update) (err error)
 		"`/spendingadd 100` _- where 100 is price_\n" +
 		"/report7 _- report by current week_\n" +
 		"/report31 _- report by current month_\n" +
-		"/report365 _- report by current year_"
+		"/report365 _- report by current year_\n" +
+		"/currency _- change currency_"
 	err = s.client.SendMessage(msg, update.Message.Chat.ID)
 	if err != nil {
 		return err

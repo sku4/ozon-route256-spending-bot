@@ -9,11 +9,17 @@ const (
 )
 
 var (
-	Abbreviation = map[string]Currency{
+	AbbrCurr = map[string]Currency{
 		"USD": USD,
 		"CNY": CNY,
 		"EUR": EUR,
 		"RUB": RUB,
+	}
+	CurrAbbr = map[Currency]string{
+		USD: "USD",
+		CNY: "CNY",
+		EUR: "EUR",
+		RUB: "RUB",
 	}
 )
 

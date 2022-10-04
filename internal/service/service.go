@@ -19,6 +19,7 @@ type Spending interface {
 	SpendingAddQuery(context.Context, tgbotapi.Update) error
 	Categories
 	Report
+	Currency
 }
 
 type Categories interface {
@@ -36,6 +37,11 @@ type Report interface {
 type Middleware interface {
 	DefineUser(context.Context, tgbotapi.Update) (context.Context, error)
 	UpdateRates(context.Context)
+}
+
+type Currency interface {
+	Currency(context.Context, tgbotapi.Update) error
+	CurrencyQuery(context.Context, tgbotapi.Update) error
 }
 
 type Service struct {

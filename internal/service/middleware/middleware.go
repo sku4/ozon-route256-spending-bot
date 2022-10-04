@@ -9,30 +9,6 @@ import (
 	"gitlab.ozon.dev/skubach/workshop-1-bot/model/telegram/bot/client"
 )
 
-type iUpdate interface {
-	tgbotapi.Update | tgbotapi.CallbackQuery
-}
-
-type Update[T iUpdate] struct {
-	elem T
-}
-
-func NewUpdate[T iUpdate](elem T) *Update[T] {
-	return &Update[T]{
-		elem: elem,
-	}
-}
-
-func (u Update[T]) GetUserId() (id int, err error) {
-	if upd, ok := any(u.elem).(tgbotapi.Update); ok {
-		return upd.Message.From.ID, nil
-	} else if upd, ok := any(u.elem).(tgbotapi.CallbackQuery); ok {
-		return upd.Message.From.ID, nil
-	}
-
-	return 0, errors.New("user id not found")
-}
-
 type Middleware struct {
 	users  repository.Users
 	rates  repository.Rates
@@ -48,10 +24,11 @@ func NewMiddleware(users repository.Users, rates repository.Rates, client client
 }
 
 func (m Middleware) DefineUser(ctx context.Context, update tgbotapi.Update) (context.Context, error) {
-	upd := NewUpdate(update)
-	userId, err := upd.GetUserId()
-	if err != nil {
-		return ctx, err
+	userId := 0
+	if update.Message != nil {
+		userId = update.Message.From.ID
+	} else if update.CallbackQuery != nil {
+		userId = update.CallbackQuery.From.ID
 	}
 
 	u := m.users.AddUser(userId)

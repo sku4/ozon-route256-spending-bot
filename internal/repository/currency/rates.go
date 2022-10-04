@@ -48,6 +48,25 @@ func NewRates() *Rates {
 	}
 }
 
+func (rs *Rates) IsLoaded(ctx context.Context) bool {
+	_ = ctx
+
+	rs.mutex.RLock()
+	defer rs.mutex.RUnlock()
+
+	return rs.loaded
+}
+
+func (rs *Rates) GetRate(ctx context.Context, currency Currency) (*Rate, bool) {
+	_ = ctx
+
+	rs.mutex.RLock()
+	defer rs.mutex.RUnlock()
+	r, ok := rs.m[currency]
+
+	return r, ok
+}
+
 func (rs *Rates) UpdateRates(ctx context.Context) (err error) {
 	if rs.lastUpdate.Add(updateTime).After(time.Now()) {
 		return nil
@@ -57,22 +76,22 @@ func (rs *Rates) UpdateRates(ctx context.Context) (err error) {
 
 	resp, err := http.Get(nbrbRatesUrl)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "nbrb get rates")
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "nbrb rates read all")
 	}
 
 	err = resp.Body.Close()
 	if err != nil {
-		return
+		return errors.Wrap(err, "nbrb rates body close")
 	}
 
 	var nbrbRates []nbrb.Rate
 	if err = json.Unmarshal(body, &nbrbRates); err != nil {
-		return
+		return errors.Wrap(err, "nbrb rates unmarshal")
 	}
 
 	if resp.StatusCode != http.StatusOK {
@@ -89,7 +108,7 @@ func (rs *Rates) UpdateRates(ctx context.Context) (err error) {
 		}
 	}
 	for _, nbrbRate := range nbrbRates {
-		if currency, ok := Abbreviation[nbrbRate.CurAbbreviation]; ok {
+		if currency, ok := AbbrCurr[nbrbRate.CurAbbreviation]; ok {
 			rate := nbrbRate.CurOfficialRate / float64(nbrbRate.CurScale)
 			r := rate / rateByn
 			rs.m[currency] = &Rate{
