@@ -6,8 +6,8 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/pkg/errors"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/currency"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/service/middleware"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/model/telegram/bot/client"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/user"
 	"strconv"
 )
 
@@ -63,7 +63,7 @@ func (s *Service) CurrencyQuery(ctx context.Context, update tgbotapi.Update) (er
 
 	if userCurrency > -1 {
 		// change currency
-		u, err := middleware.UserFromContext(ctx)
+		u, err := user.FromContext(ctx)
 		if err != nil {
 			_ = s.client.SendMessage(fmt.Sprintf(
 				"User not found: %s", err.Error()), update.CallbackQuery.Message.Chat.ID)

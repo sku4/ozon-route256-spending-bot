@@ -3,10 +3,9 @@ package middleware
 import (
 	"context"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
-	"github.com/pkg/errors"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/user"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/model/telegram/bot/client"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/user"
 )
 
 type Middleware struct {
@@ -32,7 +31,7 @@ func (m Middleware) DefineUser(ctx context.Context, update tgbotapi.Update) (con
 	}
 
 	u := m.users.AddUser(userId)
-	ctx = UserToContext(ctx, u)
+	ctx = user.ToContext(ctx, u)
 
 	return ctx, nil
 }
@@ -41,17 +40,4 @@ func (m Middleware) UpdateRates(ctx context.Context) {
 	m.rates.UpdateRatesSync(ctx)
 
 	return
-}
-
-type ctxUser struct{}
-
-func UserToContext(ctx context.Context, u *user.User) context.Context {
-	return context.WithValue(ctx, ctxUser{}, u)
-}
-
-func UserFromContext(ctx context.Context) (u *user.User, err error) {
-	if u, ok := ctx.Value(ctxUser{}).(*user.User); ok {
-		return u, nil
-	}
-	return nil, errors.New("user not found in context")
 }

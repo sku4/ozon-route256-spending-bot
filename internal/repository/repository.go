@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/currency"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/spending"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/user"
 	"time"
@@ -13,7 +14,7 @@ type Spending interface {
 	Events(context.Context) []spending.Event
 	AddEvent(context.Context, int, time.Time, float64) ([]spending.Event, error)
 	DeleteEvent(context.Context, int) ([]spending.Event, error)
-	Report(context.Context, time.Time, time.Time) map[int]float64
+	Report(context.Context, time.Time, time.Time, *currency.Rates) (map[int]float64, error)
 	Categories
 }
 

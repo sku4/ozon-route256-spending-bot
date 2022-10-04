@@ -9,6 +9,7 @@ import (
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/currency"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/spending"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/model/telegram/bot/client"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/user"
 	"strconv"
 	"strings"
 	"time"
@@ -97,6 +98,15 @@ func (s *Service) SpendingAdd(ctx context.Context, update tgbotapi.Update) (err 
 		return errors.New("Price less than 0")
 	}
 
+	userCtx, err := user.FromContext(ctx)
+	if err != nil {
+		_ = s.client.SendMessage(fmt.Sprintf(
+			"User not found: %s", err.Error()), update.CallbackQuery.Message.Chat.ID)
+		return errors.Wrap(err, "user not found")
+	}
+
+	userCurrAbbr := currency.CurrAbbr[userCtx.State.Currency]
+
 	var inlineKeyboardRows []*client.KeyboardRow
 	inlineKeyboardRow := client.NewKeyboardRow()
 	event := NewEvent(price)
@@ -113,7 +123,7 @@ func (s *Service) SpendingAdd(ctx context.Context, update tgbotapi.Update) (err 
 	inlineKeyboardRows = append(inlineKeyboardRows, inlineKeyboardRow)
 
 	err = s.client.SendInlineKeyboard(inlineKeyboardRows,
-		fmt.Sprintf("Choose category (*%.2f*):", price), update.Message.Chat.ID)
+		fmt.Sprintf("Choose category (*%.2f %s*):", price, userCurrAbbr), update.Message.Chat.ID)
 	if err != nil {
 		return err
 	}
@@ -143,6 +153,15 @@ func (s *Service) SpendingAddQuery(ctx context.Context, update tgbotapi.Update) 
 		}
 	}
 
+	userCtx, err := user.FromContext(ctx)
+	if err != nil {
+		_ = s.client.SendMessage(fmt.Sprintf(
+			"User not found: %s", err.Error()), update.CallbackQuery.Message.Chat.ID)
+		return errors.Wrap(err, "user not found")
+	}
+
+	userCurrAbbr := currency.CurrAbbr[userCtx.State.Currency]
+
 	now := time.Now().UTC()
 	if event.D > -1 {
 		// add event
@@ -154,14 +173,14 @@ func (s *Service) SpendingAddQuery(ctx context.Context, update tgbotapi.Update) 
 			return errors.Wrap(err, "add event")
 		}
 		err = s.client.SendCallbackQuery(inlineKeyboardRows, fmt.Sprintf(
-			"Event with price *%v* on *%s* success added to *%s*\r\n"+
-				"Show /report7 /report31 /report365", event.Price, t.Format("2 Jan 06"), category.Title),
+			"Event with price *%v %s* on *%s* success added to *%s*\r\n"+
+				"Show /report7 /report31 /report365", event.Price, userCurrAbbr, t.Format("2 Jan 06"), category.Title),
 			update.CallbackQuery.Message.MessageID, update.CallbackQuery.Message.Chat.ID)
 	} else if event.M > -1 {
 		// show days
 		firstMonth := time.Date(2006, time.Month(event.M), 1, 0, 0, 0, 0, time.Local)
-		msg := fmt.Sprintf("Choose days (*%.2f* > *%s* > *%d* > *%s*):",
-			event.Price, category.Title, event.Y, firstMonth.Format("Jan"))
+		msg := fmt.Sprintf("Choose days (*%.2f %s* > *%s* > *%d* > *%s*):",
+			event.Price, userCurrAbbr, category.Title, event.Y, firstMonth.Format("Jan"))
 		t := time.Date(event.Y, time.Month(event.M)+1, 0, 0, 0, 0, 0, time.Local)
 		countDays := t.Day()
 		for i := 1; i <= countDays; i++ {
@@ -181,8 +200,8 @@ func (s *Service) SpendingAddQuery(ctx context.Context, update tgbotapi.Update) 
 	} else if event.Y > -1 {
 		// show months
 		firstMonth := time.Date(2006, 1, 1, 0, 0, 0, 0, time.Local)
-		msg := fmt.Sprintf("Choose months (*%.2f* > *%s* > *%d*):",
-			event.Price, category.Title, event.Y)
+		msg := fmt.Sprintf("Choose months (*%.2f %s* > *%s* > *%d*):",
+			event.Price, userCurrAbbr, category.Title, event.Y)
 		for i := 1; i <= 12; i++ {
 			m := firstMonth.Format("Jan")
 			firstMonth = firstMonth.AddDate(0, 1, 0)
@@ -205,7 +224,7 @@ func (s *Service) SpendingAddQuery(ctx context.Context, update tgbotapi.Update) 
 			update.CallbackQuery.Message.MessageID, update.CallbackQuery.Message.Chat.ID)
 	} else if event.SelectedToday {
 		// show years
-		msg := fmt.Sprintf("Choose years (*%.2f* > *%s*):", event.Price, category.Title)
+		msg := fmt.Sprintf("Choose years (*%.2f %s* > *%s*):", event.Price, userCurrAbbr, category.Title)
 		years := []int{now.Year() - 1, now.Year(), now.Year() + 1}
 		for _, year := range years {
 			event.Y = year
@@ -223,7 +242,7 @@ func (s *Service) SpendingAddQuery(ctx context.Context, update tgbotapi.Update) 
 			update.CallbackQuery.Message.MessageID, update.CallbackQuery.Message.Chat.ID)
 	} else if event.CategoryId > -1 {
 		// choose date
-		msg := fmt.Sprintf("Choose date (*%.2f* > *%s*):", event.Price, category.Title)
+		msg := fmt.Sprintf("Choose date (*%.2f %s* > *%s*):", event.Price, userCurrAbbr, category.Title)
 		event.Today = true
 		event.SelectedToday = true
 		event.D = now.Day()
@@ -247,7 +266,7 @@ func (s *Service) SpendingAddQuery(ctx context.Context, update tgbotapi.Update) 
 			update.CallbackQuery.Message.MessageID, update.CallbackQuery.Message.Chat.ID)
 	} else if event.Price > 0 {
 		// show categories
-		msg := fmt.Sprintf("Choose category (*%.2f*):", event.Price)
+		msg := fmt.Sprintf("Choose category (*%.2f %s*):", event.Price, userCurrAbbr)
 		categories := s.repos.Categories(ctx)
 		if len(categories) == 0 {
 			_ = s.client.SendMessage(

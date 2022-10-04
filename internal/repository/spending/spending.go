@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/pkg/errors"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/currency"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/user"
 	"sync"
 	"time"
 )
@@ -70,11 +71,18 @@ func (s *Spending) AddEvent(ctx context.Context, categoryId int, date time.Time,
 		s.mutex.Unlock()
 		return nil, errors.New("category not found")
 	}
+
+	u, err := user.FromContext(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "user not found")
+	}
+
 	s.events = append(s.events, Event{
 		Id:       genEventId(),
 		Category: category,
 		Date:     date,
 		Price:    Float64ToPrice(price),
+		Currency: u.State.Currency,
 	})
 	s.mutex.Unlock()
 
@@ -94,23 +102,47 @@ func (s *Spending) DeleteEvent(ctx context.Context, id int) ([]Event, error) {
 	return s.Events(ctx), nil
 }
 
-func (s Spending) Report(ctx context.Context, f1, f2 time.Time) (m map[int]float64) {
+func (s Spending) Report(ctx context.Context, f1, f2 time.Time, rates *currency.Rates) (m map[int]float64, err error) {
 	_ = ctx
 
 	s.mutex.RLock()
-	stat := make(map[int]PriceFloat64)
+	stat := make(map[int]map[currency.Currency]PriceFloat64)
 	for _, event := range s.events {
 		if (event.Date.After(f1) || event.Date.Equal(f1)) && (event.Date.Before(f2) || event.Date.Equal(f2)) {
-			stat[event.Category.Id] += event.Price
+			if _, ok := stat[event.Category.Id]; !ok {
+				stat[event.Category.Id] = make(map[currency.Currency]PriceFloat64)
+			}
+			stat[event.Category.Id][event.Currency] += event.Price
 		}
 	}
 	s.mutex.RUnlock()
+
+	userCtx, err := user.FromContext(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "user not found")
+	}
+	userCurr := userCtx.State.Currency
+	rateUserCurr, ok := rates.GetRate(ctx, userCurr)
+	if !ok {
+		return nil, errors.Wrap(err, "user currency not found")
+	}
+	rateUserFloat := rateUserCurr.Rate.Float()
+
 	m = make(map[int]float64)
-	for catId, price := range stat {
-		m[catId] = price.Float()
+	for catId, c := range stat {
+		sumCurr := float64(0)
+		for curr, sum := range c {
+			r, ok := rates.GetRate(ctx, curr)
+			if !ok {
+				continue
+			}
+			rate := r.Rate.Float()
+			sumCurr += rate * (sum.Float() / rateUserFloat)
+		}
+		m[catId] = sumCurr
 	}
 
-	return m
+	return m, nil
 }
 
 var genEventId = func() func() int {
