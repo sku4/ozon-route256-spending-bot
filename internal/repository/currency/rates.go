@@ -62,7 +62,18 @@ func (rs *Rates) GetRate(ctx context.Context, currency *Currency) (*Rate, bool) 
 
 	rs.mutex.RLock()
 	defer rs.mutex.RUnlock()
+
 	r, ok := rs.m[currency]
+	if !ok && currency.Id == DefaultCurrency {
+		defCur, err := GetById(DefaultCurrency)
+		if err != nil {
+			return nil, false
+		}
+		return &Rate{
+			Currency: defCur,
+			Rate:     1,
+		}, true
+	}
 
 	return r, ok
 }

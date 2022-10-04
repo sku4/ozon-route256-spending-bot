@@ -165,8 +165,15 @@ func (s *Service) SpendingAddQuery(ctx context.Context, update tgbotapi.Update) 
 	now := time.Now().UTC()
 	if event.D > -1 {
 		// add event
+		userRate, ok := s.rates.GetRate(ctx, userCtx.State.Currency)
+		if !ok {
+			_ = s.client.SendMessage(fmt.Sprintf(
+				"Rate not found: %s", err.Error()), update.CallbackQuery.Message.Chat.ID)
+			return errors.Wrap(err, "rate not found")
+		}
+		userRateFloat64 := userRate.Rate.Float()
 		t := time.Date(event.Y, time.Month(event.M), event.D, 0, 0, 0, 0, now.Location())
-		_, err = s.repos.AddEvent(ctx, event.CategoryId, t, event.Price)
+		_, err = s.repos.AddEvent(ctx, event.CategoryId, t, event.Price*userRateFloat64)
 		if err != nil {
 			_ = s.client.SendMessage(fmt.Sprintf(
 				"Error add event: %s", err.Error()), update.CallbackQuery.Message.Chat.ID)

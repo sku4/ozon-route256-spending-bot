@@ -25,7 +25,6 @@ type Event struct {
 	Category Category
 	Date     time.Time
 	Price    PriceFloat64
-	Currency *currency.Currency
 }
 
 type PriceFloat64 int64
@@ -72,17 +71,11 @@ func (s *Spending) AddEvent(ctx context.Context, categoryId int, date time.Time,
 		return nil, errors.New("category not found")
 	}
 
-	u, err := user.FromContext(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "user not found")
-	}
-
 	s.events = append(s.events, Event{
 		Id:       genEventId(),
 		Category: category,
 		Date:     date,
 		Price:    Float64ToPrice(price),
-		Currency: u.State.Currency,
 	})
 	s.mutex.Unlock()
 
@@ -106,13 +99,10 @@ func (s Spending) Report(ctx context.Context, f1, f2 time.Time, rates *currency.
 	_ = ctx
 
 	s.mutex.RLock()
-	stat := make(map[int]map[*currency.Currency]PriceFloat64)
+	stat := make(map[int]PriceFloat64)
 	for _, event := range s.events {
 		if (event.Date.After(f1) || event.Date.Equal(f1)) && (event.Date.Before(f2) || event.Date.Equal(f2)) {
-			if _, ok := stat[event.Category.Id]; !ok {
-				stat[event.Category.Id] = make(map[*currency.Currency]PriceFloat64)
-			}
-			stat[event.Category.Id][event.Currency] += event.Price
+			stat[event.Category.Id] += event.Price
 		}
 	}
 	s.mutex.RUnlock()
@@ -129,17 +119,8 @@ func (s Spending) Report(ctx context.Context, f1, f2 time.Time, rates *currency.
 	rateUserFloat := rateUserCurr.Rate.Float()
 
 	m = make(map[int]float64)
-	for catId, c := range stat {
-		sumCurr := float64(0)
-		for curr, sum := range c {
-			r, ok := rates.GetRate(ctx, curr)
-			if !ok {
-				continue
-			}
-			rate := r.Rate.Float()
-			sumCurr += rate * (sum.Float() / rateUserFloat)
-		}
-		m[catId] = sumCurr
+	for catId, sum := range stat {
+		m[catId] = sum.Float() / rateUserFloat
 	}
 
 	return m, nil
