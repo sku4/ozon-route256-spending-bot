@@ -3,10 +3,26 @@ package state
 import (
 	"github.com/pkg/errors"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/currency"
+	"sync"
 )
 
 type State struct {
-	Currency *currency.Currency
+	currency *currency.Currency
+	mutex    sync.RWMutex
+}
+
+func (s *State) SetCurrency(c *currency.Currency) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	s.currency = c
+}
+
+func (s *State) GetCurrency() *currency.Currency {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+
+	return s.currency
 }
 
 func NewState() (s *State, err error) {
@@ -16,6 +32,6 @@ func NewState() (s *State, err error) {
 	}
 
 	return &State{
-		Currency: c,
+		currency: c,
 	}, nil
 }
