@@ -6,7 +6,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/pkg/errors"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/currency"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/rates"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/user"
 	"time"
 )
@@ -27,7 +27,7 @@ func (s *Service) Report7(ctx context.Context, update tgbotapi.Update) (err erro
 	f2 := f1.AddDate(0, 0, 6)
 	f2 = time.Date(f2.Year(), f2.Month(), f2.Day(), 23, 59, 59, 0, f2.Location())
 
-	report, err := buildReport(ctx, s.repos, s.rates, f1, f2)
+	report, err := buildReport(ctx, s.reposSpend, s.rates, f1, f2)
 	if err != nil {
 		return errors.Wrap(err, "build report 7")
 	}
@@ -54,7 +54,7 @@ func (s *Service) Report31(ctx context.Context, update tgbotapi.Update) (err err
 	f1 := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
 	f2 := time.Date(f1.Year(), f1.Month()+1, 0, 23, 59, 59, 0, f1.Location())
 
-	report, err := buildReport(ctx, s.repos, s.rates, f1, f2)
+	report, err := buildReport(ctx, s.reposSpend, s.rates, f1, f2)
 	if err != nil {
 		return errors.Wrap(err, "build report 31")
 	}
@@ -82,7 +82,7 @@ func (s *Service) Report365(ctx context.Context, update tgbotapi.Update) (err er
 	f2 := f1.AddDate(1, 0, -1)
 	f2 = time.Date(f2.Year(), f2.Month(), f2.Day(), 23, 59, 59, f2.Nanosecond(), f2.Location())
 
-	report, err := buildReport(ctx, s.repos, s.rates, f1, f2)
+	report, err := buildReport(ctx, s.reposSpend, s.rates, f1, f2)
 	if err != nil {
 		return errors.Wrap(err, "build report 365")
 	}
@@ -102,7 +102,7 @@ func (s *Service) Report365(ctx context.Context, update tgbotapi.Update) (err er
 	return
 }
 
-func buildReport(ctx context.Context, repos repository.Spending, rates currency.RatesClient, f1, f2 time.Time) (string, error) {
+func buildReport(ctx context.Context, repos repository.Spending, rates rates.Client, f1, f2 time.Time) (string, error) {
 	report := ""
 	m, err := repos.Report(ctx, f1, f2, rates)
 	if err != nil {

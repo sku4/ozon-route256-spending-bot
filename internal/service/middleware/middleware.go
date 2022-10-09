@@ -5,18 +5,18 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/pkg/errors"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/currency"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/rates"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/model/telegram/bot/client"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/user"
 )
 
 type Middleware struct {
 	users  repository.Users
-	rates  currency.RatesClient
+	rates  rates.Client
 	client client.BotClient
 }
 
-func NewMiddleware(users repository.Users, rates currency.RatesClient, client client.BotClient) *Middleware {
+func NewMiddleware(users repository.Users, client client.BotClient, rates rates.Client) *Middleware {
 	return &Middleware{
 		users:  users,
 		rates:  rates,

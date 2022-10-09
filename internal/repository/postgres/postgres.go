@@ -6,7 +6,11 @@ import (
 )
 
 const (
-	usersTable = "users"
+// RateTable     = "rate"
+// StateTable    = "state"
+// UserTable     = "user"
+// CategoryTable = "category"
+// EventTable    = "event"
 )
 
 type Config struct {

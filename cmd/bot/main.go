@@ -9,7 +9,8 @@ import (
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/handler"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/currency"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/rates"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/rates/nbrb"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/service"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/model/telegram/bot/client"
 	tg "gitlab.ozon.dev/skubach/workshop-1-bot/model/telegram/bot/server"
@@ -56,12 +57,15 @@ func main() {
 		sugar.Fatalf("failed to initialize db: %s", err.Error())
 	}
 
-	var rates currency.RatesClient
-	rates = currency.NewRates(db)
-	rates.UpdateRatesSync(ctx)
+	repos, err := repository.NewRepository(db)
+	if err != nil {
+		sugar.Fatalf("failed init repository: %s", err.Error())
+	}
+	var nbrbClient rates.Client
+	nbrbClient = nbrb.NewRates(db, repos.CurrencyClient)
+	nbrbClient.UpdateRatesSync(ctx)
 
-	repos := repository.NewRepository(db)
-	services := service.NewService(repos, tgClient, rates)
+	services := service.NewService(repos, tgClient, nbrbClient)
 	handlers := handler.NewHandler(ctx, services)
 
 	quit := make(chan os.Signal, 1)

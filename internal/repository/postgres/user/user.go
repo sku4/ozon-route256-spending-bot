@@ -3,7 +3,9 @@ package user
 import (
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/currency"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/state"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/model"
 	"sync"
 )
 
@@ -12,26 +14,28 @@ var (
 )
 
 type Users struct {
-	users []*User
-	db    *sqlx.DB
+	users     []*User
+	db        *sqlx.DB
+	reposCurr currency.Client
 }
 
 type User struct {
-	id    int
-	state *state.State
+	model.User
+	State *state.State
 }
 
 func (u *User) GetState() *state.State {
 	mutex.RLock()
 	defer mutex.RUnlock()
 
-	return u.state
+	return u.State
 }
 
-func NewUsers(db *sqlx.DB) *Users {
+func NewUsers(db *sqlx.DB, reposCurr currency.Client) *Users {
 	us := &Users{
-		users: make([]*User, 0),
-		db:    db,
+		users:     make([]*User, 0),
+		db:        db,
+		reposCurr: reposCurr,
 	}
 
 	return us
@@ -45,13 +49,15 @@ func (us *Users) AddUser(id int) (u *User, err error) {
 	mutex.Lock()
 	defer mutex.Unlock()
 
-	s, err := state.NewState()
+	s, err := state.NewState(us.reposCurr)
 	if err != nil {
 		return nil, errors.Wrap(err, "add user")
 	}
 	u = &User{
-		id:    id,
-		state: s,
+		User: model.User{
+			Id: id,
+		},
+		State: s,
 	}
 	us.users = append(us.users, u)
 
@@ -63,7 +69,7 @@ func (us *Users) GetUserById(id int) (u *User, err error) {
 	defer mutex.RUnlock()
 
 	for _, user := range us.users {
-		if user.id == id {
+		if user.Id == id {
 			return user, nil
 		}
 	}

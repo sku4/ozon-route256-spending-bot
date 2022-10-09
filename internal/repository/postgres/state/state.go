@@ -1,37 +1,37 @@
 package state
 
 import (
-	"github.com/pkg/errors"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/currency"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/model"
 	"sync"
 )
 
 type State struct {
-	currency *currency.Currency
-	mutex    sync.RWMutex
+	model.State
+	mutex *sync.RWMutex
 }
 
-func (s *State) SetCurrency(c *currency.Currency) {
+func (s *State) SetCurrency(c *model.Currency) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	s.currency = c
+	s.Currency = c
 }
 
-func (s *State) GetCurrency() *currency.Currency {
+func (s *State) GetCurrency() *model.Currency {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 
-	return s.currency
+	return s.Currency
 }
 
-func NewState() (s *State, err error) {
-	c, err := currency.GetById(currency.DefaultCurrency)
-	if err != nil {
-		return nil, errors.Wrap(err, "new state")
-	}
+func NewState(reposCurr currency.Client) (s *State, err error) {
+	c := reposCurr.GetDefault()
 
 	return &State{
-		currency: c,
+		State: model.State{
+			Currency: c,
+		},
+		mutex: &sync.RWMutex{},
 	}, nil
 }

@@ -1,4 +1,4 @@
-package currency
+package nbrb
 
 import (
 	"context"
@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/currency"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/rates"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/model"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/model/nbrb"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/log"
 	"io"
@@ -15,48 +18,26 @@ import (
 )
 
 const (
-	nbrbRatesUrl          = "https://www.nbrb.by/api/exrates/rates?periodicity=0"
-	decimalFactor float64 = 10000
-	updateTime            = time.Hour
+	nbrbRatesUrl = "https://www.nbrb.by/api/exrates/rates?periodicity=0"
+	updateTime   = time.Hour
 )
 
-type RatesClient interface {
-	IsLoaded(context.Context) bool
-	GetRate(context.Context, *Currency) (*Rate, bool)
-	UpdateRates(context.Context) error
-	UpdateRatesSync(context.Context)
-	SyncChan() chan struct{}
-}
-
-type Rate struct {
-	*Currency
-	Rate RateFloat64
-}
-
-type RateFloat64 int64
-
-func (p RateFloat64) Original() int64 {
-	return int64(p)
-}
-
-func (p RateFloat64) Float() float64 {
-	return float64(p) / decimalFactor
-}
-
 type Rates struct {
-	m          map[*Currency]*Rate
+	m          map[*model.Currency]*rates.Rate
 	lastUpdate time.Time
 	loaded     bool
 	mutex      sync.RWMutex
 	syncChan   chan struct{}
 	db         *sqlx.DB
+	reposCurr  currency.Client
 }
 
-func NewRates(db *sqlx.DB) *Rates {
+func NewRates(db *sqlx.DB, reposCurrencies currency.Client) *Rates {
 	return &Rates{
-		m:      make(map[*Currency]*Rate),
-		loaded: false,
-		db:     db,
+		m:         make(map[*model.Currency]*rates.Rate),
+		loaded:    false,
+		db:        db,
+		reposCurr: reposCurrencies,
 	}
 }
 
@@ -69,19 +50,17 @@ func (rs *Rates) IsLoaded(ctx context.Context) bool {
 	return rs.loaded
 }
 
-func (rs *Rates) GetRate(ctx context.Context, currency *Currency) (*Rate, bool) {
+func (rs *Rates) GetRate(ctx context.Context, curr *model.Currency) (*rates.Rate, bool) {
 	_ = ctx
 
 	rs.mutex.RLock()
 	defer rs.mutex.RUnlock()
 
-	r, ok := rs.m[currency]
-	if !ok && currency.Id == DefaultCurrency {
-		defCur, err := GetById(DefaultCurrency)
-		if err != nil {
-			return nil, false
-		}
-		return &Rate{
+	r, ok := rs.m[curr]
+	if !ok && curr.Id == rs.reposCurr.GetDefault().Id {
+		defCur := rs.reposCurr.GetDefault()
+
+		return &rates.Rate{
 			Currency: defCur,
 			Rate:     1,
 		}, true
@@ -124,10 +103,7 @@ func (rs *Rates) UpdateRates(ctx context.Context) (err error) {
 
 	rs.mutex.Lock()
 	rateByn := float64(0)
-	currencyRub, err := GetById(RUB)
-	if err != nil {
-		return errors.Wrap(err, "currency rub")
-	}
+	currencyRub := rs.reposCurr.GetDefault()
 	for _, nbrbRate := range nbrbRates {
 		if nbrbRate.CurAbbreviation == currencyRub.Abbr {
 			rateByn = nbrbRate.CurOfficialRate / float64(nbrbRate.CurScale)
@@ -135,15 +111,15 @@ func (rs *Rates) UpdateRates(ctx context.Context) (err error) {
 		}
 	}
 	for _, nbrbRate := range nbrbRates {
-		currency, err := GetByAbbr(nbrbRate.CurAbbreviation)
+		curr, err := rs.reposCurr.GetByAbbr(nbrbRate.CurAbbreviation)
 		if err != nil {
 			continue
 		}
 		rate := nbrbRate.CurOfficialRate / float64(nbrbRate.CurScale)
 		r := rate / rateByn
-		rs.m[currency] = &Rate{
-			Currency: currency,
-			Rate:     Float64ToRate(r),
+		rs.m[curr] = &rates.Rate{
+			Currency: curr,
+			Rate:     rates.Float64ToRate(r),
 		}
 	}
 	rs.lastUpdate = time.Now()
@@ -164,8 +140,4 @@ func (rs *Rates) UpdateRatesSync(ctx context.Context) {
 
 func (rs *Rates) SyncChan() chan struct{} {
 	return rs.syncChan
-}
-
-func Float64ToRate(f float64) RateFloat64 {
-	return RateFloat64(f * decimalFactor)
 }

@@ -4,7 +4,7 @@ import (
 	"context"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/currency"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/rates"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/service/middleware"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/service/spending"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/model/telegram/bot/client"
@@ -49,9 +49,9 @@ type Service struct {
 	Middleware
 }
 
-func NewService(repos *repository.Repository, client client.BotClient, rates currency.RatesClient) *Service {
+func NewService(repos *repository.Repository, client client.BotClient, rates rates.Client) *Service {
 	return &Service{
-		Spending:   spending.NewService(repos.Spending, client, rates),
-		Middleware: middleware.NewMiddleware(repos.Users, rates, client),
+		Spending:   spending.NewService(repos.Spending, repos.CurrencyClient, client, rates),
+		Middleware: middleware.NewMiddleware(repos.Users, client, rates),
 	}
 }

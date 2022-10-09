@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/currency"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/rates"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/spending"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/model/telegram/bot/client"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/user"
@@ -18,9 +19,10 @@ import (
 //go:generate mockgen -source=spending.go -destination=mocks/spending.go
 
 type Service struct {
-	repos  repository.Spending
-	client client.BotClient
-	rates  currency.RatesClient
+	reposSpend repository.Spending
+	reposCurr  currency.Client
+	client     client.BotClient
+	rates      rates.Client
 }
 
 type Event struct {
@@ -43,11 +45,13 @@ func NewEvent(price float64) *Event {
 	}
 }
 
-func NewService(repos repository.Spending, client client.BotClient, rates currency.RatesClient) *Service {
+func NewService(reposSpending repository.Spending, reposCurrencies currency.Client, client client.BotClient,
+	rates rates.Client) *Service {
 	return &Service{
-		repos:  repos,
-		client: client,
-		rates:  rates,
+		reposSpend: reposSpending,
+		reposCurr:  reposCurrencies,
+		client:     client,
+		rates:      rates,
 	}
 }
 
@@ -110,7 +114,7 @@ func (s *Service) SpendingAdd(ctx context.Context, update tgbotapi.Update) (err 
 	var inlineKeyboardRows []*client.KeyboardRow
 	inlineKeyboardRow := client.NewKeyboardRow()
 	event := NewEvent(price)
-	categories := s.repos.Categories(ctx)
+	categories := s.reposSpend.Categories(ctx)
 	if len(categories) == 0 {
 		_ = s.client.SendMessage("Categories list is empty, please add /categories", update.Message.Chat.ID)
 		return errors.New("Categories list is empty")
@@ -145,7 +149,7 @@ func (s *Service) SpendingAddQuery(ctx context.Context, update tgbotapi.Update) 
 
 	var category spending.Category
 	if event.CategoryId > -1 {
-		for _, c := range s.repos.Categories(ctx) {
+		for _, c := range s.reposSpend.Categories(ctx) {
 			if c.Id == event.CategoryId {
 				category = c
 				break
@@ -175,7 +179,7 @@ func (s *Service) SpendingAddQuery(ctx context.Context, update tgbotapi.Update) 
 		t := time.Date(event.Y, time.Month(event.M), event.D, 0, 0, 0, 0, now.Location())
 		// wait until rates will update
 		<-s.rates.SyncChan()
-		_, err = s.repos.AddEvent(ctx, event.CategoryId, t, event.Price*userRateFloat64)
+		_, err = s.reposSpend.AddEvent(ctx, event.CategoryId, t, event.Price*userRateFloat64)
 		if err != nil {
 			_ = s.client.SendMessage(fmt.Sprintf(
 				"Error add event: %s", err.Error()), update.CallbackQuery.Message.Chat.ID)
@@ -276,7 +280,7 @@ func (s *Service) SpendingAddQuery(ctx context.Context, update tgbotapi.Update) 
 	} else if event.Price > 0 {
 		// show categories
 		msg := fmt.Sprintf("Choose category (*%.2f %s*):", event.Price, userCurrAbbr)
-		categories := s.repos.Categories(ctx)
+		categories := s.reposSpend.Categories(ctx)
 		if len(categories) == 0 {
 			_ = s.client.SendMessage(
 				"Categories list is empty, please add /categories", update.CallbackQuery.Message.Chat.ID)

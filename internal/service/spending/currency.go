@@ -5,7 +5,6 @@ import (
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/pkg/errors"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/currency"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/model/telegram/bot/client"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/user"
 	"strconv"
@@ -25,7 +24,7 @@ func (s *Service) Currency(ctx context.Context, update tgbotapi.Update) (err err
 
 	var inlineKeyboardRows []*client.KeyboardRow
 	inlineKeyboardRow := client.NewKeyboardRow()
-	for _, c := range currency.All() {
+	for _, c := range s.reposCurr.All() {
 		inlineKeyboardRow.Add(c.Abbr, currencyPrefix+strconv.Itoa(c.Id))
 	}
 	inlineKeyboardRows = append(inlineKeyboardRows, inlineKeyboardRow)
@@ -50,7 +49,7 @@ func (s *Service) CurrencyQuery(ctx context.Context, update tgbotapi.Update) (er
 		return errors.Wrap(err, "currency user not convert")
 	}
 
-	userCurrency, err := currency.GetById(postfixCur)
+	userCurrency, err := s.reposCurr.GetById(postfixCur)
 	if err != nil {
 		_ = s.client.SendMessage(fmt.Sprintf(
 			"Currency not found: %s", err.Error()), update.CallbackQuery.Message.Chat.ID)
