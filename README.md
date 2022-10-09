@@ -15,7 +15,7 @@ Postgres:
 Example environment file ```.env```:
 
 ```shell
-POSTGRES_PASSWORD=123456
+POSTGRES_PASSWORD=mysecretpassword
 ```
 ## Available commands:
 - /categories

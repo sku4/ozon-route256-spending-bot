@@ -15,7 +15,7 @@ type Spending interface {
 	Events(context.Context) []spending.Event
 	AddEvent(context.Context, int, time.Time, float64) ([]spending.Event, error)
 	DeleteEvent(context.Context, int) ([]spending.Event, error)
-	Report(context.Context, time.Time, time.Time, *currency.Rates) (map[int]float64, error)
+	Report(context.Context, time.Time, time.Time, currency.RatesClient) (map[int]float64, error)
 	Categories
 }
 
@@ -30,16 +30,10 @@ type Users interface {
 	GetUserById(int) (*user.User, error)
 }
 
-type Rates interface {
-	UpdateRates(context.Context) error
-	UpdateRatesSync(context.Context)
-	SyncChan() chan struct{}
-}
-
 type Repository struct {
 	Spending
 	Users
-	Rates
+	currency.RatesClient
 }
 
 func NewRepository(db *sqlx.DB) *Repository {

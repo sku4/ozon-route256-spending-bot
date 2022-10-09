@@ -56,7 +56,7 @@ func main() {
 		sugar.Fatalf("failed to initialize db: %s", err.Error())
 	}
 
-	rates := currency.NewRates()
+	rates := currency.NewRates(db)
 	rates.UpdateRatesSync(ctx)
 
 	repos := repository.NewRepository(db)

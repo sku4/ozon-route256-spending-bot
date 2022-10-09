@@ -102,7 +102,7 @@ func (s *Service) Report365(ctx context.Context, update tgbotapi.Update) (err er
 	return
 }
 
-func buildReport(ctx context.Context, repos repository.Spending, rates *currency.Rates, f1, f2 time.Time) (string, error) {
+func buildReport(ctx context.Context, repos repository.Spending, rates currency.RatesClient, f1, f2 time.Time) (string, error) {
 	report := ""
 	m, err := repos.Report(ctx, f1, f2, rates)
 	if err != nil {

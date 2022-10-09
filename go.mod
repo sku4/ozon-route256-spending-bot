@@ -6,6 +6,7 @@ require (
 	github.com/go-telegram-bot-api/telegram-bot-api v4.6.4+incompatible
 	github.com/golang/mock v1.4.4
 	github.com/jmoiron/sqlx v1.3.5
+	github.com/joho/godotenv v1.4.0
 	github.com/lib/pq v1.10.7
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/viper v1.13.0

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/model/nbrb"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/log"
@@ -18,6 +19,14 @@ const (
 	decimalFactor float64 = 10000
 	updateTime            = time.Hour
 )
+
+type RatesClient interface {
+	IsLoaded(context.Context) bool
+	GetRate(context.Context, *Currency) (*Rate, bool)
+	UpdateRates(context.Context) error
+	UpdateRatesSync(context.Context)
+	SyncChan() chan struct{}
+}
 
 type Rate struct {
 	*Currency
@@ -40,12 +49,14 @@ type Rates struct {
 	loaded     bool
 	mutex      sync.RWMutex
 	syncChan   chan struct{}
+	db         *sqlx.DB
 }
 
-func NewRates() *Rates {
+func NewRates(db *sqlx.DB) *Rates {
 	return &Rates{
 		m:      make(map[*Currency]*Rate),
 		loaded: false,
+		db:     db,
 	}
 }
 

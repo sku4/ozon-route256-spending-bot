@@ -98,7 +98,7 @@ func (s *Spending) DeleteEvent(ctx context.Context, id int) ([]Event, error) {
 	return s.Events(ctx), nil
 }
 
-func (s Spending) Report(ctx context.Context, f1, f2 time.Time, rates *currency.Rates) (m map[int]float64, err error) {
+func (s Spending) Report(ctx context.Context, f1, f2 time.Time, rates currency.RatesClient) (m map[int]float64, err error) {
 	_ = ctx
 
 	s.mutex.RLock()

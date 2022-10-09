@@ -49,7 +49,7 @@ type Service struct {
 	Middleware
 }
 
-func NewService(repos *repository.Repository, client client.BotClient, rates *currency.Rates) *Service {
+func NewService(repos *repository.Repository, client client.BotClient, rates currency.RatesClient) *Service {
 	return &Service{
 		Spending:   spending.NewService(repos.Spending, client, rates),
 		Middleware: middleware.NewMiddleware(repos.Users, rates, client),

@@ -1,18 +1,24 @@
 package configs
 
 import (
+	"github.com/joho/godotenv"
+	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 	"os"
 )
 
 type Config struct {
 	TelegramBotToken string `mapstructure:"TelegramBotToken"`
-	Username         string `mapstructure:"Postgres.username"`
-	Host             string `mapstructure:"Postgres.host"`
-	Port             string `mapstructure:"Postgres.port"`
-	DBName           string `mapstructure:"Postgres.dbname"`
-	SslMode          string `mapstructure:"Postgres.sslmode"`
-	Password         string
+	Postgres         `mapstructure:"Postgres"`
+}
+
+type Postgres struct {
+	Username string `mapstructure:"username"`
+	Host     string `mapstructure:"host"`
+	Port     string `mapstructure:"port"`
+	DBName   string `mapstructure:"dbname"`
+	SslMode  string `mapstructure:"sslmode"`
+	Password string
 }
 
 func Init() (*Config, error) {
@@ -25,10 +31,14 @@ func Init() (*Config, error) {
 	var cfg Config
 
 	if err := mainViper.Unmarshal(&cfg); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "config viper unmarshal")
 	}
 
-	cfg.Password = os.Getenv("POSTGRES_PASSWORD")
+	if err := godotenv.Load(); err != nil {
+		return nil, errors.Wrap(err, "error loading env variables")
+	}
+
+	cfg.Postgres.Password = os.Getenv("POSTGRES_PASSWORD")
 
 	return &cfg, nil
 }

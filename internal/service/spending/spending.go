@@ -20,7 +20,7 @@ import (
 type Service struct {
 	repos  repository.Spending
 	client client.BotClient
-	rates  *currency.Rates
+	rates  currency.RatesClient
 }
 
 type Event struct {
@@ -43,7 +43,7 @@ func NewEvent(price float64) *Event {
 	}
 }
 
-func NewService(repos repository.Spending, client client.BotClient, rates *currency.Rates) *Service {
+func NewService(repos repository.Spending, client client.BotClient, rates currency.RatesClient) *Service {
 	return &Service{
 		repos:  repos,
 		client: client,
