@@ -50,3 +50,26 @@ install-smartimports: bindir
 
 docker-run:
 	sudo docker compose up
+
+goose-create:
+	goose -dir migrations postgres \
+		"port=5432 user=postgres dbname=postgres password=${POSTGRES_PASSWORD} sslmode=disable" \
+		create migrate sql
+
+goose-create-go:
+	goose -dir migrations postgres \
+		"port=5432 user=postgres dbname=postgres password=${POSTGRES_PASSWORD} sslmode=disable" \
+		create migrate go
+
+goose-up:
+	goose -dir migrations postgres \
+		"port=5432 user=postgres dbname=postgres password=${POSTGRES_PASSWORD} sslmode=disable" up
+
+goose-down:
+	goose -dir migrations postgres \
+		"port=5432 user=postgres dbname=postgres password=${POSTGRES_PASSWORD} sslmode=disable" down
+
+goose-status:
+	goose -dir migrations postgres \
+		"port=5432 user=postgres dbname=postgres password=${POSTGRES_PASSWORD} sslmode=disable" \
+		status

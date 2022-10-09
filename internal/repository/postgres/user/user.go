@@ -38,7 +38,7 @@ func NewUsers(db *sqlx.DB) *Users {
 }
 
 func (us *Users) AddUser(id int) (u *User, err error) {
-	if u, err := us.GetUserById(id); err == nil {
+	if u, err = us.GetUserById(id); err == nil {
 		return u, nil
 	}
 
