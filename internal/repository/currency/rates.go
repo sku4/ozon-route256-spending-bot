@@ -39,6 +39,7 @@ type Rates struct {
 	lastUpdate time.Time
 	loaded     bool
 	mutex      sync.RWMutex
+	syncChan   chan struct{}
 }
 
 func NewRates() *Rates {
@@ -143,9 +144,15 @@ func (rs *Rates) UpdateRates(ctx context.Context) (err error) {
 }
 
 func (rs *Rates) UpdateRatesSync(ctx context.Context) {
+	rs.syncChan = make(chan struct{})
 	go func(ctx context.Context, rates *Rates) {
 		_ = rates.UpdateRates(ctx)
+		rs.syncChan <- struct{}{}
 	}(ctx, rs)
+}
+
+func (rs *Rates) SyncChan() chan struct{} {
+	return rs.syncChan
 }
 
 func Float64ToRate(f float64) RateFloat64 {

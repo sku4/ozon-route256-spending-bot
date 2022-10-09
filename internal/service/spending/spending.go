@@ -173,6 +173,8 @@ func (s *Service) SpendingAddQuery(ctx context.Context, update tgbotapi.Update) 
 		}
 		userRateFloat64 := userRate.Rate.Float()
 		t := time.Date(event.Y, time.Month(event.M), event.D, 0, 0, 0, 0, now.Location())
+		// wait until rates will update
+		<-s.rates.SyncChan()
 		_, err = s.repos.AddEvent(ctx, event.CategoryId, t, event.Price*userRateFloat64)
 		if err != nil {
 			_ = s.client.SendMessage(fmt.Sprintf(

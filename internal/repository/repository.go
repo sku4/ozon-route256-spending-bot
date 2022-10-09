@@ -32,6 +32,7 @@ type Users interface {
 type Rates interface {
 	UpdateRates(context.Context) error
 	UpdateRatesSync(context.Context)
+	SyncChan() chan struct{}
 }
 
 type Repository struct {
