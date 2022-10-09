@@ -111,7 +111,7 @@ func (s Spending) Report(ctx context.Context, f1, f2 time.Time, rates *currency.
 	if err != nil {
 		return nil, errors.Wrap(err, "user not found")
 	}
-	userCurr := userCtx.State.GetCurrency()
+	userCurr := userCtx.GetState().GetCurrency()
 	rateUserCurr, ok := rates.GetRate(ctx, userCurr)
 	if !ok {
 		return nil, errors.Wrap(err, "user currency not found")

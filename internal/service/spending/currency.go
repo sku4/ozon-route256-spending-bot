@@ -67,7 +67,7 @@ func (s *Service) CurrencyQuery(ctx context.Context, update tgbotapi.Update) (er
 			return errors.Wrap(err, "user not found")
 		}
 
-		u.State.SetCurrency(userCurrency)
+		u.GetState().SetCurrency(userCurrency)
 
 		err = s.client.SendCallbackQuery(inlineKeyboardRows, fmt.Sprintf(
 			"Currency success changed to *%s*\r\n"+

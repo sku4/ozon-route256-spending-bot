@@ -14,8 +14,15 @@ var (
 type Users []*User
 
 type User struct {
-	Id    int
-	State *state.State
+	id    int
+	state *state.State
+}
+
+func (u *User) GetState() *state.State {
+	mutex.RLock()
+	defer mutex.RUnlock()
+
+	return u.state
 }
 
 func NewUsers() *Users {
@@ -37,8 +44,8 @@ func (us *Users) AddUser(id int) (u *User, err error) {
 		return nil, errors.Wrap(err, "add user")
 	}
 	u = &User{
-		Id:    id,
-		State: s,
+		id:    id,
+		state: s,
 	}
 	users = append(users, u)
 
@@ -50,7 +57,7 @@ func (us *Users) GetUserById(id int) (u *User, err error) {
 	defer mutex.RUnlock()
 
 	for _, user := range users {
-		if user.Id == id {
+		if user.id == id {
 			return user, nil
 		}
 	}
