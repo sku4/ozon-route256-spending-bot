@@ -1,17 +1,20 @@
 package user
 
 import (
+	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/memory/state"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/state"
 	"sync"
 )
 
 var (
-	users Users
-	mutex sync.RWMutex
+	mutex = &sync.RWMutex{}
 )
 
-type Users []*User
+type Users struct {
+	users []*User
+	db    *sqlx.DB
+}
 
 type User struct {
 	id    int
@@ -25,10 +28,13 @@ func (u *User) GetState() *state.State {
 	return u.state
 }
 
-func NewUsers() *Users {
-	users = make(Users, 0)
+func NewUsers(db *sqlx.DB) *Users {
+	us := &Users{
+		users: make([]*User, 0),
+		db:    db,
+	}
 
-	return &users
+	return us
 }
 
 func (us *Users) AddUser(id int) (u *User, err error) {
@@ -47,7 +53,7 @@ func (us *Users) AddUser(id int) (u *User, err error) {
 		id:    id,
 		state: s,
 	}
-	users = append(users, u)
+	us.users = append(us.users, u)
 
 	return u, nil
 }
@@ -56,7 +62,7 @@ func (us *Users) GetUserById(id int) (u *User, err error) {
 	mutex.RLock()
 	defer mutex.RUnlock()
 
-	for _, user := range users {
+	for _, user := range us.users {
 		if user.id == id {
 			return user, nil
 		}

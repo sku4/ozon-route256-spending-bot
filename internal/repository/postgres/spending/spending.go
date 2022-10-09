@@ -3,8 +3,9 @@ package spending
 import (
 	"context"
 	"fmt"
+	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/memory/currency"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/currency"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/user"
 	"sync"
 	"time"
@@ -18,6 +19,7 @@ type Spending struct {
 	categories []Category
 	events     []Event
 	mutex      *sync.RWMutex
+	db         *sqlx.DB
 }
 
 type Event struct {
@@ -41,9 +43,10 @@ func (p PriceFloat64) String() string {
 	return fmt.Sprintf("%.2f", float64(p)/decimalFactor)
 }
 
-func NewSpending() *Spending {
+func NewSpending(db *sqlx.DB) *Spending {
 	return &Spending{
 		mutex: &sync.RWMutex{},
+		db:    db,
 	}
 }
 

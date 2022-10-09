@@ -3,7 +3,7 @@ package user
 import (
 	"context"
 	"github.com/pkg/errors"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/memory/user"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/user"
 )
 
 type ctxUser struct{}

@@ -4,6 +4,18 @@ Example config file ```configs/config.yml```:
 
 ```yaml
 TelegramBotToken: "<token>"
+
+Postgres:
+  username: "postgres"
+  host: "localhost"
+  port: "5432"
+  dbname: "postgres"
+  sslmode: "disable"
+```
+Example environment file ```.env```:
+
+```shell
+POSTGRES_PASSWORD=123456
 ```
 ## Available commands:
 - /categories

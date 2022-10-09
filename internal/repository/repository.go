@@ -2,9 +2,10 @@ package repository
 
 import (
 	"context"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/memory/currency"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/memory/spending"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/memory/user"
+	"github.com/jmoiron/sqlx"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/currency"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/spending"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/user"
 	"time"
 )
 
@@ -41,9 +42,9 @@ type Repository struct {
 	Rates
 }
 
-func NewRepository() *Repository {
+func NewRepository(db *sqlx.DB) *Repository {
 	return &Repository{
-		Spending: spending.NewSpending(),
-		Users:    user.NewUsers(),
+		Spending: spending.NewSpending(db),
+		Users:    user.NewUsers(db),
 	}
 }

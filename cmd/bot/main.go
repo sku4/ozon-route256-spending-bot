@@ -3,11 +3,13 @@ package main
 import (
 	"context"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
+	_ "github.com/lib/pq"
 	"github.com/pkg/errors"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/configs"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/handler"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/memory/currency"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/currency"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/service"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/model/telegram/bot/client"
 	tg "gitlab.ozon.dev/skubach/workshop-1-bot/model/telegram/bot/server"
@@ -42,10 +44,22 @@ func main() {
 		sugar.Fatalf("error init telegram bot: %s", err.Error())
 	}
 
+	db, err := postgres.NewPostgresDB(postgres.Config{
+		Host:     cfg.Host,
+		Port:     cfg.Port,
+		Username: cfg.Username,
+		DBName:   cfg.DBName,
+		SslMode:  cfg.SslMode,
+		Password: cfg.Password,
+	})
+	if err != nil {
+		sugar.Fatalf("failed to initialize db: %s", err.Error())
+	}
+
 	rates := currency.NewRates()
 	rates.UpdateRatesSync(ctx)
 
-	repos := repository.NewRepository()
+	repos := repository.NewRepository(db)
 	services := service.NewService(repos, tgClient, rates)
 	handlers := handler.NewHandler(ctx, services)
 
