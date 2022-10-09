@@ -2,9 +2,9 @@ package repository
 
 import (
 	"context"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/currency"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/spending"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/user"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/memory/currency"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/memory/spending"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/memory/user"
 	"time"
 )
 

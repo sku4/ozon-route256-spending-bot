@@ -2,7 +2,7 @@ package user
 
 import (
 	"github.com/pkg/errors"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/state"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/memory/state"
 	"sync"
 )
 

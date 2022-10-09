@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/pkg/errors"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/currency"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/memory/currency"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/user"
 	"sync"
 	"time"

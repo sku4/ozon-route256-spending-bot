@@ -7,7 +7,7 @@ import (
 	"gitlab.ozon.dev/skubach/workshop-1-bot/configs"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/handler"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/currency"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/memory/currency"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/service"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/model/telegram/bot/client"
 	tg "gitlab.ozon.dev/skubach/workshop-1-bot/model/telegram/bot/server"
