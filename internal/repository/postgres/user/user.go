@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/category_limit"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/currency"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/state"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/model"
@@ -20,11 +19,10 @@ var (
 )
 
 type Users struct {
-	users            []*User
-	db               *sqlx.DB
-	reposCurr        currency.Client
-	reposState       state.Client
-	reposCatLimitSet category_limit.CategoryLimitSet
+	users      []*User
+	db         *sqlx.DB
+	reposCurr  currency.Client
+	reposState state.Client
 }
 
 type User struct {
@@ -54,14 +52,12 @@ func (u *User) GetState() (s *state.State, err error) {
 	return u.State, nil
 }
 
-func NewUsers(db *sqlx.DB, reposCurr currency.Client, reposState state.Client,
-	reposCatLimitSet category_limit.CategoryLimitSet) *Users {
+func NewUsers(db *sqlx.DB, reposCurr currency.Client, reposState state.Client) *Users {
 	us := &Users{
-		users:            make([]*User, 0),
-		db:               db,
-		reposCurr:        reposCurr,
-		reposState:       reposState,
-		reposCatLimitSet: reposCatLimitSet,
+		users:      make([]*User, 0),
+		db:         db,
+		reposCurr:  reposCurr,
+		reposState: reposState,
 	}
 
 	return us
@@ -75,7 +71,7 @@ func (us *Users) AddUser(telegramId int) (u *User, err error) {
 	mutex.Lock()
 	defer mutex.Unlock()
 
-	st, err := state.NewState(us.db, us.reposCurr, us.reposCatLimitSet)
+	st, err := us.reposState.AddState()
 	if err != nil {
 		return nil, errors.Wrap(err, "add user")
 	}

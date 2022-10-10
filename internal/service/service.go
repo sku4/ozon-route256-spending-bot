@@ -57,7 +57,7 @@ type Service struct {
 
 func NewService(repos *repository.Repository, client client.BotClient, rates rates.Client) *Service {
 	return &Service{
-		Spending:   spending.NewService(repos.Spending, repos.CurrencyClient, client, rates),
+		Spending:   spending.NewService(repos.Spending, repos.Categories, repos.CurrencyClient, client, rates),
 		Middleware: middleware.NewMiddleware(repos.Users, client, rates),
 	}
 }

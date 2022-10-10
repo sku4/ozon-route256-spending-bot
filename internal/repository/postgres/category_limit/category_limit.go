@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/spending"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/category"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/model"
 )
 
@@ -26,10 +26,10 @@ type CategoryLimit struct {
 	model.CategoryLimit
 	Limit          LimitFloat64
 	db             *sqlx.DB
-	categorySearch spending.CategorySearch
+	categorySearch category.Search
 }
 
-func NewCategoryLimit(db *sqlx.DB, categorySearch spending.CategorySearch) *CategoryLimit {
+func NewCategoryLimit(db *sqlx.DB, categorySearch category.Search) *CategoryLimit {
 	return &CategoryLimit{
 		db:             db,
 		categorySearch: categorySearch,

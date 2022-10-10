@@ -37,7 +37,7 @@ func (s *Service) CategoryAdd(ctx context.Context, update tgbotapi.Update) (err 
 		_ = s.client.SendMessage("Category title is empty, please set title", update.Message.Chat.ID)
 		return errors.Wrap(err, "category title is empty")
 	}
-	_, err = s.reposSpend.AddCategory(ctx, title)
+	_, err = s.reposCat.AddCategory(ctx, title)
 	if err != nil {
 		_ = s.client.SendMessage(fmt.Sprintf(
 			"Error add category *%s*: %s", title, err.Error()), update.Message.Chat.ID)
@@ -66,7 +66,7 @@ func (s *Service) CategoriesQuery(ctx context.Context, update tgbotapi.Update) (
 			update.CallbackQuery.Message.MessageID, update.CallbackQuery.Message.Chat.ID)
 	case "categories_list":
 		msg := "Categories list:"
-		categories, err := s.reposSpend.Categories(ctx)
+		categories, err := s.reposCat.Categories(ctx)
 		if err != nil {
 			_ = s.client.SendMessage(fmt.Sprintf(
 				"Categories: %s", err.Error()), update.CallbackQuery.Message.Chat.ID)

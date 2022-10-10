@@ -16,6 +16,7 @@ const (
 
 type Client interface {
 	GetById(int) (*State, error)
+	AddState() (*State, error)
 }
 
 type State struct {
@@ -25,35 +26,6 @@ type State struct {
 	db               *sqlx.DB
 	reposCurr        currency.Client
 	reposCatLimitSet category_limit.CategoryLimitSet
-}
-
-func NewState(db *sqlx.DB, reposCurr currency.Client, reposCatLimitSet category_limit.CategoryLimitSet) (s *State, err error) {
-	c := reposCurr.GetDefault()
-
-	var stateId int
-	createStateQuery := fmt.Sprintf("INSERT INTO %s (currency_id) values ($1) RETURNING id", stateTable)
-	row := s.db.QueryRow(createStateQuery, c.Id)
-	err = row.Scan(&stateId)
-	if err != nil {
-		return nil, errors.Wrap(err, "insert state")
-	}
-
-	limits, err := reposCatLimitSet.GetByState(stateId)
-	if err != nil {
-		return nil, errors.Wrap(err, "new state")
-	}
-
-	return &State{
-		State: model.State{
-			Id:       stateId,
-			Currency: c,
-		},
-		limits:           limits,
-		mutex:            &sync.RWMutex{},
-		db:               db,
-		reposCurr:        reposCurr,
-		reposCatLimitSet: reposCatLimitSet,
-	}, nil
 }
 
 func (s *State) SetCurrency(c *model.Currency) (err error) {
@@ -158,4 +130,33 @@ func (s *States) GetById(id int) (st *State, err error) {
 	}
 
 	return
+}
+
+func (s *States) AddState() (st *State, err error) {
+	c := s.reposCurr.GetDefault()
+
+	var stateId int
+	createStateQuery := fmt.Sprintf("INSERT INTO %s (currency_id) values ($1) RETURNING id", stateTable)
+	row := s.db.QueryRow(createStateQuery, c.Id)
+	err = row.Scan(&stateId)
+	if err != nil {
+		return nil, errors.Wrap(err, "insert state")
+	}
+
+	limits, err := s.reposCatLimitSet.GetByState(stateId)
+	if err != nil {
+		return nil, errors.Wrap(err, "new state")
+	}
+
+	return &State{
+		State: model.State{
+			Id:       stateId,
+			Currency: c,
+		},
+		limits:           limits,
+		mutex:            &sync.RWMutex{},
+		db:               s.db,
+		reposCurr:        s.reposCurr,
+		reposCatLimitSet: s.reposCatLimitSet,
+	}, nil
 }

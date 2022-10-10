@@ -57,7 +57,7 @@ func (s *Service) LimitAdd(ctx context.Context, update tgbotapi.Update) (err err
 	var inlineKeyboardRows []*client.KeyboardRow
 	inlineKeyboardRow := client.NewKeyboardRow()
 	event := NewEvent(priceLimit)
-	cats, err := s.reposSpend.Categories(ctx)
+	cats, err := s.reposCat.Categories(ctx)
 	if err != nil {
 		return errors.New("limit add categories")
 	}
@@ -92,7 +92,7 @@ func (s *Service) LimitQuery(ctx context.Context, update tgbotapi.Update) (err e
 		return errors.Wrap(err, "event unserialize")
 	}
 
-	catSelected, err := s.reposSpend.CategoryGetById(event.CategoryId)
+	catSelected, err := s.reposCat.CategoryGetById(event.CategoryId)
 	if err != nil {
 		_ = s.client.SendMessage(fmt.Sprintf(
 			"Category not found: %s", err.Error()), update.CallbackQuery.Message.Chat.ID)

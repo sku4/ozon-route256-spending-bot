@@ -21,6 +21,7 @@ import (
 type Service struct {
 	reposSpend repository.Spending
 	reposCurr  currency.Client
+	reposCat   repository.Categories
 	client     client.BotClient
 	rates      rates.Client
 }
@@ -45,9 +46,10 @@ func NewEvent(price float64) *Event {
 	}
 }
 
-func NewService(reposSpending repository.Spending, reposCurrencies currency.Client, client client.BotClient,
+func NewService(reposSpending repository.Spending, reposCategories repository.Categories, reposCurrencies currency.Client, client client.BotClient,
 	rates rates.Client) *Service {
 	return &Service{
+		reposCat:   reposCategories,
 		reposSpend: reposSpending,
 		reposCurr:  reposCurrencies,
 		client:     client,
@@ -126,7 +128,7 @@ func (s *Service) SpendingAdd(ctx context.Context, update tgbotapi.Update) (err 
 	var inlineKeyboardRows []*client.KeyboardRow
 	inlineKeyboardRow := client.NewKeyboardRow()
 	event := NewEvent(price)
-	categories, err := s.reposSpend.Categories(ctx)
+	categories, err := s.reposCat.Categories(ctx)
 	if err != nil {
 		return errors.Wrap(err, "event add categories")
 	}
@@ -164,7 +166,7 @@ func (s *Service) SpendingAddQuery(ctx context.Context, update tgbotapi.Update) 
 
 	var category model.Category
 	if event.CategoryId > -1 {
-		cs, err := s.reposSpend.Categories(ctx)
+		cs, err := s.reposCat.Categories(ctx)
 		if err != nil {
 			return errors.Wrap(err, "event add categories")
 		}
@@ -342,7 +344,7 @@ func (s *Service) SpendingAddQuery(ctx context.Context, update tgbotapi.Update) 
 	} else if event.Price > 0 {
 		// show categories
 		msg := fmt.Sprintf("Choose category (*%.2f %s*):", event.Price, userCurrAbbr)
-		categories, err := s.reposSpend.Categories(ctx)
+		categories, err := s.reposCat.Categories(ctx)
 		if err != nil {
 			return errors.Wrap(err, "event add categories")
 		}

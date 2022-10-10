@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/category"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/rates"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/model"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/user"
@@ -14,13 +15,13 @@ import (
 
 const (
 	decimalFactor float64 = 100
-	categoryTable         = "category"
 	eventTable            = "event"
 )
 
 type Spending struct {
-	mutex *sync.RWMutex
-	db    *sqlx.DB
+	mutex          *sync.RWMutex
+	db             *sqlx.DB
+	categorySearch category.Search
 }
 
 type Event struct {
@@ -42,10 +43,11 @@ func (p PriceFloat64) String() string {
 	return fmt.Sprintf("%.2f", float64(p)/decimalFactor)
 }
 
-func NewSpending(db *sqlx.DB) *Spending {
+func NewSpending(db *sqlx.DB, categorySearch category.Search) *Spending {
 	return &Spending{
-		mutex: &sync.RWMutex{},
-		db:    db,
+		mutex:          &sync.RWMutex{},
+		db:             db,
+		categorySearch: categorySearch,
 	}
 }
 
@@ -54,15 +56,15 @@ func (s *Spending) AddEvent(ctx context.Context, categoryId int, date time.Time,
 
 	s.mutex.Lock()
 
-	category, err := s.CategoryGetById(categoryId)
-	if errors.Is(err, categoryNotFoundError) {
+	cat, err := s.categorySearch.CategoryGetById(categoryId)
+	if errors.Is(err, category.NotFoundError) {
 		s.mutex.Unlock()
 		return 0, errors.Wrap(err, "category not found")
 	}
 
 	createCategoryQuery := fmt.Sprintf("INSERT INTO %s (category_id, event_at, price) values ($1, $2, $3) RETURNING id",
 		eventTable)
-	row := s.db.QueryRow(createCategoryQuery, category.Id, date.Format("2006-01-02"), Float64ToPrice(price))
+	row := s.db.QueryRow(createCategoryQuery, cat.Id, date.Format("2006-01-02"), Float64ToPrice(price))
 	err = row.Scan(&eventId)
 	if err != nil {
 		s.mutex.Unlock()
