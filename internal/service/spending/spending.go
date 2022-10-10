@@ -329,6 +329,9 @@ func (s *Service) SpendingAddQuery(ctx context.Context, update tgbotapi.Update) 
 		inlineKeyboardRows = append(inlineKeyboardRows, inlineKeyboardRow)
 		err = s.client.SendCallbackQuery(inlineKeyboardRows, msg,
 			update.CallbackQuery.Message.MessageID, update.CallbackQuery.Message.Chat.ID)
+		if err != nil {
+			return errors.Wrap(err, "send callback query")
+		}
 	}
 
 	return

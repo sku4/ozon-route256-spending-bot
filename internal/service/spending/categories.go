@@ -76,6 +76,9 @@ func (s *Service) CategoriesQuery(ctx context.Context, update tgbotapi.Update) (
 		inlineKeyboardRows = append(inlineKeyboardRows, inlineKeyboardRow, inlineKeyboardRow2)
 		err = s.client.SendCallbackQuery(inlineKeyboardRows, msg,
 			update.CallbackQuery.Message.MessageID, update.CallbackQuery.Message.Chat.ID)
+		if err != nil {
+			return errors.Wrap(err, "send callback query")
+		}
 	case "categories_add":
 		msg := "Write `/categoryadd Food` to added category"
 		err = s.client.SendMessage(msg, update.CallbackQuery.Message.Chat.ID)

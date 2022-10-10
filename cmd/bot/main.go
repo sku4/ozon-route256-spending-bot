@@ -61,11 +61,11 @@ func main() {
 	if err != nil {
 		sugar.Fatalf("failed init repository: %s", err.Error())
 	}
-	var nbrbClient rates.Client
-	nbrbClient = nbrb.NewRates(db, repos.CurrencyClient)
-	nbrbClient.UpdateRatesSync(ctx)
+	var ratesClient rates.Client
+	ratesClient = nbrb.NewRates(db, repos.CurrencyClient)
+	ratesClient.UpdateRatesSync(ctx)
 
-	services := service.NewService(repos, tgClient, nbrbClient)
+	services := service.NewService(repos, tgClient, ratesClient)
 	handlers := handler.NewHandler(ctx, services)
 
 	quit := make(chan os.Signal, 1)
