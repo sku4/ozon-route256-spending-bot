@@ -113,9 +113,20 @@ func buildReport(ctx context.Context, repos repository.Spending, rates rates.Cli
 	if err != nil {
 		return "", errors.Wrap(err, "user not found")
 	}
-	userCurrAbbr := userCtx.GetState().GetCurrency().Abbr
+	uState, err := userCtx.GetState()
+	if err != nil {
+		return "", errors.Wrap(err, "state not found")
+	}
+	uCurrency, err := uState.GetCurrency()
+	if err != nil {
+		return "", errors.Wrap(err, "currency not found")
+	}
+	userCurrAbbr := uCurrency.Abbr
 
-	categories := repos.Categories(ctx)
+	categories, err := repos.Categories(ctx)
+	if err != nil {
+		return "", errors.Wrap(err, "report categories")
+	}
 	for _, category := range categories {
 		if sum, ok := m[category.Id]; ok {
 			report += fmt.Sprintf("_%s_ - %.2f %s\n", category.Title, sum, userCurrAbbr)

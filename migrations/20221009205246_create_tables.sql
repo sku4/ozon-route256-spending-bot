@@ -13,7 +13,7 @@ create table rate
     currency_id int,
     rate        int,
     primary key (id),
-    constraint fk_currency
+    constraint fk_rate_currency
         foreign key (currency_id)
             references currency (id)
             on delete cascade
@@ -32,8 +32,9 @@ create table state
 
 create table "user"
 (
-    id       int generated always as identity,
-    state_id int,
+    id          int generated always as identity,
+    telegram_id int,
+    state_id    int,
     primary key (id),
     constraint fk_user_state
         foreign key (state_id)
@@ -53,7 +54,7 @@ create table event
 (
     id          int generated always as identity,
     category_id int,
-    event_at    timestamp not null,
+    event_at    date      not null,
     price       int,
     created_at  timestamp not null default now(),
     primary key (id),
@@ -61,6 +62,15 @@ create table event
         foreign key (category_id)
             references category (id)
             on delete cascade
+);
+
+create table category_limit
+(
+    id             int generated always as identity,
+    state_id       int references state (id) on delete cascade,
+    category_id    int references category (id) on delete cascade,
+    category_limit int,
+    primary key (id)
 );
 
 -- index by date because report build only by range dates
@@ -75,4 +85,5 @@ drop table rate;
 drop table currency;
 drop table event;
 drop table category;
+drop table category_limit;
 -- +goose StatementEnd

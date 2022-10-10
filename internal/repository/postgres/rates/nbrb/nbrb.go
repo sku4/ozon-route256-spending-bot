@@ -20,13 +20,14 @@ import (
 const (
 	nbrbRatesUrl = "https://www.nbrb.by/api/exrates/rates?periodicity=0"
 	updateTime   = time.Hour
+	rateTable    = "rate"
 )
 
 type Rates struct {
 	m          map[*model.Currency]*rates.Rate
 	lastUpdate time.Time
 	loaded     bool
-	mutex      sync.RWMutex
+	mutex      *sync.RWMutex
 	syncChan   chan struct{}
 	db         *sqlx.DB
 	reposCurr  currency.Client
@@ -38,6 +39,7 @@ func NewRates(db *sqlx.DB, reposCurrencies currency.Client) *Rates {
 		loaded:    false,
 		db:        db,
 		reposCurr: reposCurrencies,
+		mutex:     &sync.RWMutex{},
 	}
 }
 
@@ -103,13 +105,30 @@ func (rs *Rates) UpdateRates(ctx context.Context) (err error) {
 
 	rs.mutex.Lock()
 	rateByn := float64(0)
-	currencyRub := rs.reposCurr.GetDefault()
+	currencyDef := rs.reposCurr.GetDefault()
 	for _, nbrbRate := range nbrbRates {
-		if nbrbRate.CurAbbreviation == currencyRub.Abbr {
+		if nbrbRate.CurAbbreviation == currencyDef.Abbr {
 			rateByn = nbrbRate.CurOfficialRate / float64(nbrbRate.CurScale)
 			break
 		}
 	}
+
+	tx, err := rs.db.Begin()
+	if err != nil {
+		return errors.Wrap(err, "nbrb tx begin")
+	}
+
+	truncateRates := fmt.Sprintf("TRUNCATE TABLE %s", rateTable)
+	_, err = tx.Exec(truncateRates)
+	if err != nil {
+		errRoll := tx.Rollback()
+		if errRoll != nil {
+			return errors.Wrap(errRoll, "rollback")
+		}
+		return errors.Wrap(err, "truncate rates")
+	}
+	rs.m = make(map[*model.Currency]*rates.Rate)
+
 	for _, nbrbRate := range nbrbRates {
 		curr, err := rs.reposCurr.GetByAbbr(nbrbRate.CurAbbreviation)
 		if err != nil {
@@ -117,10 +136,26 @@ func (rs *Rates) UpdateRates(ctx context.Context) (err error) {
 		}
 		rate := nbrbRate.CurOfficialRate / float64(nbrbRate.CurScale)
 		r := rate / rateByn
+
+		insertRateQuery := fmt.Sprintf("INSERT INTO %s (currency_id, rate) values ($1, $2)", rateTable)
+		_, err = tx.Exec(insertRateQuery, curr.Id, rates.Float64ToRate(r))
+		if err != nil {
+			errRoll := tx.Rollback()
+			if errRoll != nil {
+				return errors.Wrap(errRoll, "rollback")
+			}
+			return errors.Wrap(err, "insert rate")
+		}
+
 		rs.m[curr] = &rates.Rate{
 			Currency: curr,
 			Rate:     rates.Float64ToRate(r),
 		}
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return errors.Wrap(err, "rates commit")
 	}
 	rs.lastUpdate = time.Now()
 	rs.loaded = true

@@ -66,7 +66,12 @@ func (s *Service) CategoriesQuery(ctx context.Context, update tgbotapi.Update) (
 			update.CallbackQuery.Message.MessageID, update.CallbackQuery.Message.Chat.ID)
 	case "categories_list":
 		msg := "Categories list:"
-		categories := s.reposSpend.Categories(ctx)
+		categories, err := s.reposSpend.Categories(ctx)
+		if err != nil {
+			_ = s.client.SendMessage(fmt.Sprintf(
+				"Categories: %s", err.Error()), update.CallbackQuery.Message.Chat.ID)
+			return errors.Wrap(err, "categories list")
+		}
 		for _, category := range categories {
 			inlineKeyboardRow.Add(category.Title, "categories_id_"+strconv.Itoa(category.Id))
 		}

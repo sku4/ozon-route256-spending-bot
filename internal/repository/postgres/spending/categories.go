@@ -2,61 +2,90 @@ package spending
 
 import (
 	"context"
-	"strings"
+	"fmt"
+	"github.com/pkg/errors"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/model"
 )
 
-type Category struct {
-	Id    int
-	Title string
+type CategorySearch interface {
+	CategoryGetById(int) (*model.Category, error)
+	CategoryGetByTitle(string) (*model.Category, error)
 }
 
-func (s Spending) Categories(context.Context) (c []Category) {
+var (
+	categoryNotFoundError = errors.New("category not found")
+)
+
+func (s Spending) Categories(context.Context) (cs []model.Category, err error) {
 	s.mutex.RLock()
-	c = s.categories
+
+	query := fmt.Sprintf(`SELECT id, title FROM %s`, categoryTable)
+	if err = s.db.Select(&cs, query); err != nil {
+		s.mutex.RUnlock()
+		return nil, errors.Wrap(err, "all categories")
+	}
+
 	s.mutex.RUnlock()
 
 	return
 }
 
-func (s *Spending) AddCategory(ctx context.Context, title string) ([]Category, error) {
+func (s *Spending) AddCategory(ctx context.Context, title string) ([]model.Category, error) {
 	s.mutex.Lock()
-	categoryFound := false
-	for _, category := range s.categories {
-		if strings.EqualFold(category.Title, title) {
-			categoryFound = true
-			break
-		}
-	}
-	if categoryFound {
+
+	_, err := s.CategoryGetByTitle(title)
+	if !errors.Is(err, categoryNotFoundError) {
 		s.mutex.Unlock()
-		return s.Categories(ctx), nil
+		return s.Categories(ctx)
 	}
-	s.categories = append(s.categories, Category{
-		Id:    genCategoryId(),
-		Title: title,
-	})
+
+	var categoryId int
+	createCategoryQuery := fmt.Sprintf("INSERT INTO %s (title) values ($1) RETURNING id", categoryTable)
+	row := s.db.QueryRow(createCategoryQuery, title)
+	err = row.Scan(&categoryId)
+	if err != nil {
+		s.mutex.Unlock()
+		return nil, errors.Wrap(err, "insert category")
+	}
+
 	s.mutex.Unlock()
 
-	return s.Categories(ctx), nil
+	return s.Categories(ctx)
 }
 
-func (s *Spending) DeleteCategory(ctx context.Context, id int) ([]Category, error) {
+func (s *Spending) DeleteCategory(ctx context.Context, id int) ([]model.Category, error) {
 	s.mutex.Lock()
-	for i, category := range s.categories {
-		if category.Id == id {
-			s.categories = append(s.categories[0:i], s.categories[i+1:]...)
-			break
-		}
+	query := fmt.Sprintf(`DELETE FROM %s WHERE id = $1`, categoryTable)
+	_, err := s.db.Exec(query, id)
+	if err != nil {
+		s.mutex.Unlock()
+		return nil, errors.Wrap(err, "delete category")
 	}
 	s.mutex.Unlock()
 
-	return s.Categories(ctx), nil
+	return s.Categories(ctx)
 }
 
-var genCategoryId = func() func() int {
-	c := -1
-	return func() int {
-		c++
-		return c
+func (s *Spending) CategoryGetById(id int) (cat *model.Category, err error) {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+
+	query := fmt.Sprintf(`SELECT id, title FROM %s WHERE id = %d`, categoryTable, id)
+	if err = s.db.Select(&cat, query); err != nil {
+		return nil, errors.Wrap(categoryNotFoundError, fmt.Sprintf("category '%d' not found", id))
 	}
-}()
+
+	return
+}
+
+func (s *Spending) CategoryGetByTitle(title string) (cat *model.Category, err error) {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+
+	query := fmt.Sprintf(`SELECT id, title FROM %s WHERE title = "%s"`, categoryTable, title)
+	if err = s.db.Select(&cat, query); err != nil {
+		return nil, errors.Wrap(categoryNotFoundError, fmt.Sprintf("category '%s' not found", title))
+	}
+
+	return
+}

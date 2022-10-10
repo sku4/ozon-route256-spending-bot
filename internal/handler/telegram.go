@@ -31,6 +31,8 @@ func (h *Handler) IncomingMessage(update tgbotapi.Update) (err error) {
 				err = h.services.Spending.Report365(ctx, update)
 			case "currency":
 				err = h.services.Spending.Currency(ctx, update)
+			case "limit":
+				err = h.services.Spending.LimitAdd(ctx, update)
 			default:
 				err = h.services.Spending.NotFound(ctx, update)
 			}
@@ -42,6 +44,8 @@ func (h *Handler) IncomingMessage(update tgbotapi.Update) (err error) {
 			err = h.services.Spending.SpendingAddQuery(ctx, update)
 		} else if strings.Index(update.CallbackQuery.Data, "currency") == 0 {
 			err = h.services.Spending.CurrencyQuery(ctx, update)
+		} else if strings.Index(update.CallbackQuery.Data, "limit") == 0 {
+			err = h.services.Spending.LimitQuery(ctx, update)
 		}
 	}
 

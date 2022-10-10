@@ -20,12 +20,18 @@ type Spending interface {
 	Categories
 	Report
 	Currency
+	CategoryLimit
 }
 
 type Categories interface {
 	Categories(context.Context, tgbotapi.Update) error
 	CategoryAdd(context.Context, tgbotapi.Update) error
 	CategoriesQuery(context.Context, tgbotapi.Update) error
+}
+
+type CategoryLimit interface {
+	LimitAdd(context.Context, tgbotapi.Update) error
+	LimitQuery(context.Context, tgbotapi.Update) error
 }
 
 type Report interface {

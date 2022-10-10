@@ -8,7 +8,7 @@ import (
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/currency"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/rates"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/spending"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/model"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/model/telegram/bot/client"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/user"
 	"strconv"
@@ -67,7 +67,8 @@ func (s *Service) Start(ctx context.Context, update tgbotapi.Update) (err error)
 		"/report7 _- report by current week_\n" +
 		"/report31 _- report by current month_\n" +
 		"/report365 _- report by current year_\n" +
-		"/currency _- change currency_"
+		"/currency _- change currency_\n" +
+		"`/limit 100` _- limit category by sum spending on month_"
 	err = s.client.SendMessage(msg, update.Message.Chat.ID)
 	if err != nil {
 		return err
@@ -108,13 +109,27 @@ func (s *Service) SpendingAdd(ctx context.Context, update tgbotapi.Update) (err 
 			"User not found: %s", err.Error()), update.CallbackQuery.Message.Chat.ID)
 		return errors.Wrap(err, "user not found")
 	}
-
-	userCurrAbbr := userCtx.GetState().GetCurrency().Abbr
+	uState, err := userCtx.GetState()
+	if err != nil {
+		_ = s.client.SendMessage(fmt.Sprintf(
+			"State not found: %s", err.Error()), update.CallbackQuery.Message.Chat.ID)
+		return errors.Wrap(err, "state not found")
+	}
+	uCurrency, err := uState.GetCurrency()
+	if err != nil {
+		_ = s.client.SendMessage(fmt.Sprintf(
+			"Currency not found: %s", err.Error()), update.CallbackQuery.Message.Chat.ID)
+		return errors.Wrap(err, "currency not found")
+	}
+	userCurrAbbr := uCurrency.Abbr
 
 	var inlineKeyboardRows []*client.KeyboardRow
 	inlineKeyboardRow := client.NewKeyboardRow()
 	event := NewEvent(price)
-	categories := s.reposSpend.Categories(ctx)
+	categories, err := s.reposSpend.Categories(ctx)
+	if err != nil {
+		return errors.Wrap(err, "event add categories")
+	}
 	if len(categories) == 0 {
 		_ = s.client.SendMessage("Categories list is empty, please add /categories", update.Message.Chat.ID)
 		return errors.New("Categories list is empty")
@@ -147,9 +162,13 @@ func (s *Service) SpendingAddQuery(ctx context.Context, update tgbotapi.Update) 
 		return errors.Wrap(err, "event unserialize")
 	}
 
-	var category spending.Category
+	var category model.Category
 	if event.CategoryId > -1 {
-		for _, c := range s.reposSpend.Categories(ctx) {
+		cs, err := s.reposSpend.Categories(ctx)
+		if err != nil {
+			return errors.Wrap(err, "event add categories")
+		}
+		for _, c := range cs {
 			if c.Id == event.CategoryId {
 				category = c
 				break
@@ -163,13 +182,20 @@ func (s *Service) SpendingAddQuery(ctx context.Context, update tgbotapi.Update) 
 			"User not found: %s", err.Error()), update.CallbackQuery.Message.Chat.ID)
 		return errors.Wrap(err, "user not found")
 	}
-
-	userCurrAbbr := userCtx.GetState().GetCurrency().Abbr
+	uState, err := userCtx.GetState()
+	if err != nil {
+		return errors.Wrap(err, "state not found")
+	}
+	uCurrency, err := uState.GetCurrency()
+	if err != nil {
+		return errors.Wrap(err, "currency not found")
+	}
+	userCurrAbbr := uCurrency.Abbr
 
 	now := time.Now().UTC()
 	if event.D > -1 {
 		// add event
-		userRate, ok := s.rates.GetRate(ctx, userCtx.GetState().GetCurrency())
+		userRate, ok := s.rates.GetRate(ctx, uCurrency)
 		if !ok {
 			_ = s.client.SendMessage(fmt.Sprintf(
 				"Rate not found: %s", err.Error()), update.CallbackQuery.Message.Chat.ID)
@@ -189,6 +215,42 @@ func (s *Service) SpendingAddQuery(ctx context.Context, update tgbotapi.Update) 
 			"Event with price *%v %s* on *%s* success added to *%s*\r\n"+
 				"Show /report7 /report31 /report365", event.Price, userCurrAbbr, t.Format("2 Jan 06"), category.Title),
 			update.CallbackQuery.Message.MessageID, update.CallbackQuery.Message.Chat.ID)
+
+		// notification by limit category
+		limits, err := uState.GetLimits()
+		if err != nil {
+			return errors.Wrap(err, "add event get limits")
+		}
+		categoryLimit := float64(0)
+		for _, limit := range limits {
+			if limit.Category.Id == category.Id {
+				categoryLimit = limit.Limit.Float()
+				break
+			}
+		}
+		if categoryLimit > 0 {
+			rateUserCurr, ok := s.rates.GetRate(ctx, uCurrency)
+			if !ok {
+				return errors.Wrap(err, "user currency not found")
+			}
+			rateUserFloat := rateUserCurr.Rate.Float()
+			categoryLimit = categoryLimit / rateUserFloat
+
+			f1 := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+			f2 := time.Date(f1.Year(), f1.Month()+1, 0, 23, 59, 59, 0, f1.Location())
+
+			m, err := s.reposSpend.Report(ctx, f1, f2, s.rates)
+			if err != nil {
+				return errors.Wrap(err, "event add report 31")
+			}
+			if sum, ok := m[category.Id]; ok {
+				if sum > categoryLimit {
+					_ = s.client.SendMessage(fmt.Sprintf(
+						"Limit by category *%s* over than *%.2f %s*",
+						category.Title, categoryLimit, userCurrAbbr), update.CallbackQuery.Message.Chat.ID)
+				}
+			}
+		}
 	} else if event.M > -1 {
 		// show days
 		firstMonth := time.Date(2006, time.Month(event.M), 1, 0, 0, 0, 0, time.Local)
@@ -280,7 +342,10 @@ func (s *Service) SpendingAddQuery(ctx context.Context, update tgbotapi.Update) 
 	} else if event.Price > 0 {
 		// show categories
 		msg := fmt.Sprintf("Choose category (*%.2f %s*):", event.Price, userCurrAbbr)
-		categories := s.reposSpend.Categories(ctx)
+		categories, err := s.reposSpend.Categories(ctx)
+		if err != nil {
+			return errors.Wrap(err, "event add categories")
+		}
 		if len(categories) == 0 {
 			_ = s.client.SendMessage(
 				"Categories list is empty, please add /categories", update.CallbackQuery.Message.Chat.ID)

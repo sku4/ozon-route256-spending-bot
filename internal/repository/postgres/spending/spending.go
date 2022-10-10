@@ -6,6 +6,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/rates"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/model"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/user"
 	"sync"
 	"time"
@@ -13,20 +14,18 @@ import (
 
 const (
 	decimalFactor float64 = 100
+	categoryTable         = "category"
+	eventTable            = "event"
 )
 
 type Spending struct {
-	categories []Category
-	events     []Event
-	mutex      *sync.RWMutex
-	db         *sqlx.DB
+	mutex *sync.RWMutex
+	db    *sqlx.DB
 }
 
 type Event struct {
-	Id       int
-	Category Category
-	Date     time.Time
-	Price    PriceFloat64
+	model.Event
+	Price PriceFloat64
 }
 
 type PriceFloat64 int64
@@ -50,52 +49,46 @@ func NewSpending(db *sqlx.DB) *Spending {
 	}
 }
 
-func (s Spending) Events(context.Context) (e []Event) {
-	s.mutex.RLock()
-	e = s.events
-	s.mutex.RUnlock()
+func (s *Spending) AddEvent(ctx context.Context, categoryId int, date time.Time, price float64) (eventId int, err error) {
+	_ = ctx
 
-	return e
-}
-
-func (s *Spending) AddEvent(ctx context.Context, categoryId int, date time.Time, price float64) ([]Event, error) {
-	var category Category
-	categoryFound := false
 	s.mutex.Lock()
-	for _, c := range s.categories {
-		if c.Id == categoryId {
-			category = c
-			categoryFound = true
-			break
-		}
-	}
-	if !categoryFound {
+
+	category, err := s.CategoryGetById(categoryId)
+	if errors.Is(err, categoryNotFoundError) {
 		s.mutex.Unlock()
-		return nil, errors.New("category not found")
+		return 0, errors.Wrap(err, "category not found")
 	}
 
-	s.events = append(s.events, Event{
-		Id:       genEventId(),
-		Category: category,
-		Date:     date,
-		Price:    Float64ToPrice(price),
-	})
+	createCategoryQuery := fmt.Sprintf("INSERT INTO %s (category_id, event_at, price) values ($1, $2, $3) RETURNING id",
+		eventTable)
+	row := s.db.QueryRow(createCategoryQuery, category.Id, date.Format("2006-01-02"), Float64ToPrice(price))
+	err = row.Scan(&eventId)
+	if err != nil {
+		s.mutex.Unlock()
+		return 0, errors.Wrap(err, "insert event")
+	}
+
 	s.mutex.Unlock()
 
-	return s.Events(ctx), nil
+	return
 }
 
-func (s *Spending) DeleteEvent(ctx context.Context, id int) ([]Event, error) {
+func (s *Spending) DeleteEvent(ctx context.Context, id int) (err error) {
+	_ = ctx
+
 	s.mutex.Lock()
-	for i, event := range s.events {
-		if event.Id == id {
-			s.events = append(s.events[0:i], s.events[i+1:]...)
-			break
-		}
+
+	query := fmt.Sprintf(`DELETE FROM %s WHERE id = $1`, eventTable)
+	_, err = s.db.Exec(query, id)
+	if err != nil {
+		s.mutex.Unlock()
+		return errors.Wrap(err, "delete event")
 	}
+
 	s.mutex.Unlock()
 
-	return s.Events(ctx), nil
+	return
 }
 
 func (s Spending) Report(ctx context.Context, f1, f2 time.Time, rates rates.Client) (m map[int]float64, err error) {
@@ -103,10 +96,16 @@ func (s Spending) Report(ctx context.Context, f1, f2 time.Time, rates rates.Clie
 
 	s.mutex.RLock()
 	stat := make(map[int]PriceFloat64)
-	for _, event := range s.events {
-		if (event.Date.After(f1) || event.Date.Equal(f1)) && (event.Date.Before(f2) || event.Date.Equal(f2)) {
-			stat[event.Category.Id] += event.Price
-		}
+
+	var events []Event
+	query := fmt.Sprintf(`SELECT id, category_id, event_at, price FROM %s WHERE event_at BETWEEN '%s' AND '%s'`,
+		eventTable, f1.Format("2006-01-02"), f2.Format("2006-01-02"))
+	if err = s.db.Select(&events, query); err != nil {
+		return nil, errors.Wrap(err, "select report")
+	}
+
+	for _, event := range events {
+		stat[event.Category.Id] += event.Price
 	}
 	s.mutex.RUnlock()
 
@@ -114,7 +113,14 @@ func (s Spending) Report(ctx context.Context, f1, f2 time.Time, rates rates.Clie
 	if err != nil {
 		return nil, errors.Wrap(err, "user not found")
 	}
-	userCurr := userCtx.GetState().GetCurrency()
+	userState, err := userCtx.GetState()
+	if err != nil {
+		return nil, errors.Wrap(err, "user state")
+	}
+	userCurr, err := userState.GetCurrency()
+	if err != nil {
+		return nil, errors.Wrap(err, "user currency")
+	}
 	rateUserCurr, ok := rates.GetRate(ctx, userCurr)
 	if !ok {
 		return nil, errors.Wrap(err, "user currency not found")
@@ -128,14 +134,6 @@ func (s Spending) Report(ctx context.Context, f1, f2 time.Time, rates rates.Clie
 
 	return m, nil
 }
-
-var genEventId = func() func() int {
-	c := -1
-	return func() int {
-		c++
-		return c
-	}
-}()
 
 func Float64ToPrice(f float64) PriceFloat64 {
 	return PriceFloat64(f * decimalFactor)
