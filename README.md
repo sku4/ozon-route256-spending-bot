@@ -19,8 +19,21 @@ POSTGRES_PASSWORD=mysecretpassword
 ```
 ## Available commands:
 - /categories
-- /categoryadd Food - where Food is category name
-- /spendingadd 100 - where 100 is price
+- `/categoryadd Food` - where Food is category name
+- `/spendingadd 100` - where 100 is price
 - /report7 - report by current week
 - /report31 - report by current month
 - /report365 - report by current year
+- /currency - change currency
+- `/limit 100` - limit category by sum spending on month
+### Run app:
+
+```
+make docker-run
+```
+
+Before first exec:
+
+```
+make goose-up
+```
