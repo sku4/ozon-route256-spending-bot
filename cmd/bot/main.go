@@ -9,7 +9,6 @@ import (
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/handler"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/rates"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/rates/nbrb"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/service"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/model/telegram/bot/client"
@@ -61,8 +60,7 @@ func main() {
 	if err != nil {
 		sugar.Fatalf("failed init repository: %s", err.Error())
 	}
-	var ratesClient rates.Client
-	ratesClient = nbrb.NewRates(db, repos.CurrencyClient)
+	ratesClient := nbrb.NewRates(db, repos.CurrencyClient)
 	ratesClient.UpdateRatesSync(ctx)
 
 	services := service.NewService(repos, tgClient, ratesClient)
