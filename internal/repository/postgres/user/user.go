@@ -1,6 +1,7 @@
 package user
 
 import (
+	"context"
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
@@ -19,7 +20,6 @@ var (
 )
 
 type Users struct {
-	users      []*User
 	db         *sqlx.DB
 	reposCurr  currency.Client
 	reposState state.Client
@@ -33,17 +33,17 @@ type User struct {
 	reposState state.Client
 }
 
-func (u *User) GetState() (s *state.State, err error) {
+func (u *User) GetState(ctx context.Context) (s *state.State, err error) {
 	mutex.RLock()
 	defer mutex.RUnlock()
 
 	if u.State == nil {
-		var user *model.UserDB
-		query := fmt.Sprintf(`SELECT id, state_id FROM %s WHERE id = %d`, userTable, u.TgId)
-		if err = u.db.Select(&user, query); err != nil {
+		var user model.UserDB
+		query := fmt.Sprintf(`SELECT id, state_id FROM "%s" WHERE id = %d`, userTable, u.TgId)
+		if err = u.db.GetContext(ctx, &user, query); err != nil {
 			return nil, errors.Wrap(err, "user get state")
 		}
-		u.State, err = u.reposState.GetById(user.StateId)
+		u.State, err = u.reposState.GetById(ctx, user.StateId)
 		if err != nil {
 			return nil, errors.Wrap(err, "user get state")
 		}
@@ -54,7 +54,6 @@ func (u *User) GetState() (s *state.State, err error) {
 
 func NewUsers(db *sqlx.DB, reposCurr currency.Client, reposState state.Client) *Users {
 	us := &Users{
-		users:      make([]*User, 0),
 		db:         db,
 		reposCurr:  reposCurr,
 		reposState: reposState,
@@ -63,22 +62,22 @@ func NewUsers(db *sqlx.DB, reposCurr currency.Client, reposState state.Client) *
 	return us
 }
 
-func (us *Users) AddUser(telegramId int) (u *User, err error) {
-	if u, err = us.GetById(telegramId); err == nil {
+func (us *Users) AddUser(ctx context.Context, telegramId int) (u *User, err error) {
+	if u, err = us.GetById(ctx, telegramId); err == nil {
 		return u, nil
 	}
 
 	mutex.Lock()
 	defer mutex.Unlock()
 
-	st, err := us.reposState.AddState()
+	st, err := us.reposState.AddState(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "add user")
 	}
 
 	var userId int
-	createUserQuery := fmt.Sprintf("INSERT INTO %s (telegram_id, state_id) values ($1, $2) RETURNING id", userTable)
-	row := us.db.QueryRow(createUserQuery, telegramId, st.Id)
+	createUserQuery := fmt.Sprintf(`INSERT INTO "%s" (telegram_id, state_id) values ($1, $2) RETURNING id`, userTable)
+	row := us.db.QueryRowContext(ctx, createUserQuery, telegramId, st.Id)
 	err = row.Scan(&userId)
 	if err != nil {
 		return nil, errors.Wrap(err, "insert user")
@@ -94,22 +93,21 @@ func (us *Users) AddUser(telegramId int) (u *User, err error) {
 		reposCurr:  us.reposCurr,
 		reposState: us.reposState,
 	}
-	us.users = append(us.users, u)
 
 	return u, nil
 }
 
-func (us *Users) GetById(id int) (u *User, err error) {
+func (us *Users) GetById(ctx context.Context, id int) (u *User, err error) {
 	mutex.RLock()
 	defer mutex.RUnlock()
 
-	var user *model.UserDB
-	query := fmt.Sprintf(`SELECT id, state_id, telegram_id FROM %s WHERE telegram_id = %d`, userTable, id)
-	if err = us.db.Select(&user, query); err != nil {
+	var user model.UserDB
+	query := fmt.Sprintf(`SELECT id, state_id, telegram_id FROM "%s" WHERE telegram_id = %d`, userTable, id)
+	if err = us.db.GetContext(ctx, &user, query); err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("user '%d' not found", id))
 	}
 
-	st, err := us.reposState.GetById(user.StateId)
+	st, err := us.reposState.GetById(ctx, user.StateId)
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("state '%d' not found", id))
 	}

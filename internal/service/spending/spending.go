@@ -6,6 +6,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/pkg/errors"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/category_limit"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/currency"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/rates"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/model"
@@ -91,8 +92,6 @@ func (s *Service) NotFound(ctx context.Context, update tgbotapi.Update) (err err
 }
 
 func (s *Service) SpendingAdd(ctx context.Context, update tgbotapi.Update) (err error) {
-	_ = ctx
-
 	priceArg := update.Message.CommandArguments()
 	price, err := strconv.ParseFloat(priceArg, 64)
 	if err != nil {
@@ -111,13 +110,13 @@ func (s *Service) SpendingAdd(ctx context.Context, update tgbotapi.Update) (err 
 			"User not found: %s", err.Error()), update.CallbackQuery.Message.Chat.ID)
 		return errors.Wrap(err, "user not found")
 	}
-	uState, err := userCtx.GetState()
+	uState, err := userCtx.GetState(ctx)
 	if err != nil {
 		_ = s.client.SendMessage(fmt.Sprintf(
 			"State not found: %s", err.Error()), update.CallbackQuery.Message.Chat.ID)
 		return errors.Wrap(err, "state not found")
 	}
-	uCurrency, err := uState.GetCurrency()
+	uCurrency, err := uState.GetCurrency(ctx)
 	if err != nil {
 		_ = s.client.SendMessage(fmt.Sprintf(
 			"Currency not found: %s", err.Error()), update.CallbackQuery.Message.Chat.ID)
@@ -153,8 +152,6 @@ func (s *Service) SpendingAdd(ctx context.Context, update tgbotapi.Update) (err 
 }
 
 func (s *Service) SpendingAddQuery(ctx context.Context, update tgbotapi.Update) (err error) {
-	_ = ctx
-
 	var inlineKeyboardRows []*client.KeyboardRow
 	inlineKeyboardRow := client.NewKeyboardRow()
 
@@ -184,11 +181,11 @@ func (s *Service) SpendingAddQuery(ctx context.Context, update tgbotapi.Update) 
 			"User not found: %s", err.Error()), update.CallbackQuery.Message.Chat.ID)
 		return errors.Wrap(err, "user not found")
 	}
-	uState, err := userCtx.GetState()
+	uState, err := userCtx.GetState(ctx)
 	if err != nil {
 		return errors.Wrap(err, "state not found")
 	}
-	uCurrency, err := uState.GetCurrency()
+	uCurrency, err := uState.GetCurrency(ctx)
 	if err != nil {
 		return errors.Wrap(err, "currency not found")
 	}
@@ -219,40 +216,11 @@ func (s *Service) SpendingAddQuery(ctx context.Context, update tgbotapi.Update) 
 			update.CallbackQuery.Message.MessageID, update.CallbackQuery.Message.Chat.ID)
 
 		// notification by limit category
-		limits, err := uState.GetLimits()
+		mess, err := s.checkLimitPrice(ctx, category)
 		if err != nil {
-			return errors.Wrap(err, "add event get limits")
+			return errors.Wrap(err, "add event check limit price")
 		}
-		categoryLimit := float64(0)
-		for _, limit := range limits {
-			if limit.Category.Id == category.Id {
-				categoryLimit = limit.Limit.Float()
-				break
-			}
-		}
-		if categoryLimit > 0 {
-			rateUserCurr, ok := s.rates.GetRate(ctx, uCurrency)
-			if !ok {
-				return errors.Wrap(err, "user currency not found")
-			}
-			rateUserFloat := rateUserCurr.Rate.Float()
-			categoryLimit = categoryLimit / rateUserFloat
-
-			f1 := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
-			f2 := time.Date(f1.Year(), f1.Month()+1, 0, 23, 59, 59, 0, f1.Location())
-
-			m, err := s.reposSpend.Report(ctx, f1, f2, s.rates)
-			if err != nil {
-				return errors.Wrap(err, "event add report 31")
-			}
-			if sum, ok := m[category.Id]; ok {
-				if sum > categoryLimit {
-					_ = s.client.SendMessage(fmt.Sprintf(
-						"Limit by category *%s* over than *%.2f %s*",
-						category.Title, categoryLimit, userCurrAbbr), update.CallbackQuery.Message.Chat.ID)
-				}
-			}
-		}
+		_ = s.client.SendMessage(mess, update.CallbackQuery.Message.Chat.ID)
 	} else if event.M > -1 {
 		// show days
 		firstMonth := time.Date(2006, time.Month(event.M), 1, 0, 0, 0, 0, time.Local)
@@ -361,6 +329,87 @@ func (s *Service) SpendingAddQuery(ctx context.Context, update tgbotapi.Update) 
 		inlineKeyboardRows = append(inlineKeyboardRows, inlineKeyboardRow)
 		err = s.client.SendCallbackQuery(inlineKeyboardRows, msg,
 			update.CallbackQuery.Message.MessageID, update.CallbackQuery.Message.Chat.ID)
+	}
+
+	return
+}
+
+func (s *Service) GetRateUserFloat(ctx context.Context) (r rates.RateFloat64, err error) {
+	userCtx, err := user.FromContext(ctx)
+	if err != nil {
+		return 0, errors.Wrap(err, "user not found")
+	}
+	uState, err := userCtx.GetState(ctx)
+	if err != nil {
+		return 0, errors.Wrap(err, "state not found")
+	}
+	uCurrency, err := uState.GetCurrency(ctx)
+	if err != nil {
+		return 0, errors.Wrap(err, "currency not found")
+	}
+	userRate, ok := s.rates.GetRate(ctx, uCurrency)
+	if !ok {
+		return 0, errors.Wrap(err, "rate not found")
+	}
+
+	return userRate.Rate, nil
+}
+
+func (s *Service) ConvertPrice(ctx context.Context, price float64) (f float64, err error) {
+	userRateFloat64, err := s.GetRateUserFloat(ctx)
+	if err != nil {
+		return 0, errors.Wrap(err, "convert price")
+	}
+
+	return userRateFloat64.Float() * price, nil
+}
+
+func (s *Service) checkLimitPrice(ctx context.Context, category model.Category) (mess string, err error) {
+	userCtx, err := user.FromContext(ctx)
+	if err != nil {
+		return "", errors.Wrap(err, "user not found")
+	}
+	uState, err := userCtx.GetState(ctx)
+	if err != nil {
+		return "", errors.Wrap(err, "state not found")
+	}
+	uCurrency, err := uState.GetCurrency(ctx)
+	if err != nil {
+		return "", errors.Wrap(err, "currency not found")
+	}
+
+	limits, err := uState.GetLimits(ctx)
+	if err != nil {
+		return "", errors.Wrap(err, "check limit price get limits")
+	}
+	categoryLimit := category_limit.LimitFloat64(0)
+	for _, limit := range limits {
+		if limit.Category.Id == category.Id {
+			categoryLimit = limit.Limit
+			break
+		}
+	}
+	if categoryLimit > 0 {
+		now := time.Now()
+		f1 := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+		f2 := time.Date(f1.Year(), f1.Month()+1, 0, 23, 59, 59, 0, f1.Location())
+
+		m, err := s.reposSpend.Report(ctx, f1, f2, s.rates)
+		if err != nil {
+			return "", errors.Wrap(err, "check limit price report 31")
+		}
+		if sum, ok := m[category.Id]; ok {
+			userRateFloat64, err := s.GetRateUserFloat(ctx)
+			if err != nil {
+				return "", errors.Wrap(err, "convert price")
+			}
+			sum = sum * userRateFloat64.Float()
+			if sum > categoryLimit.Float() {
+				mess = fmt.Sprintf("Sum *%.2f %s* by category *%s* over than *%.2f %s*",
+					sum/userRateFloat64.Float(), uCurrency.Abbr,
+					category.Title, categoryLimit.Float()/userRateFloat64.Float(), uCurrency.Abbr)
+			}
+		}
 	}
 
 	return

@@ -14,8 +14,6 @@ import (
 //go:generate mockgen -source=report.go -destination=mocks/report.go
 
 func (s *Service) Report7(ctx context.Context, update tgbotapi.Update) (err error) {
-	_ = ctx
-
 	now := time.Now()
 	f1 := now.UTC()
 	if now.Weekday() < 1 {
@@ -48,8 +46,6 @@ func (s *Service) Report7(ctx context.Context, update tgbotapi.Update) (err erro
 }
 
 func (s *Service) Report31(ctx context.Context, update tgbotapi.Update) (err error) {
-	_ = ctx
-
 	now := time.Now()
 	f1 := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
 	f2 := time.Date(f1.Year(), f1.Month()+1, 0, 23, 59, 59, 0, f1.Location())
@@ -75,8 +71,6 @@ func (s *Service) Report31(ctx context.Context, update tgbotapi.Update) (err err
 }
 
 func (s *Service) Report365(ctx context.Context, update tgbotapi.Update) (err error) {
-	_ = ctx
-
 	now := time.Now()
 	f1 := time.Date(now.Year(), 1, 1, 0, 0, 0, 0, now.Location())
 	f2 := f1.AddDate(1, 0, -1)
@@ -113,11 +107,11 @@ func buildReport(ctx context.Context, reposSpend repository.Spending, reposCat r
 	if err != nil {
 		return "", errors.Wrap(err, "user not found")
 	}
-	uState, err := userCtx.GetState()
+	uState, err := userCtx.GetState(ctx)
 	if err != nil {
 		return "", errors.Wrap(err, "state not found")
 	}
-	uCurrency, err := uState.GetCurrency()
+	uCurrency, err := uState.GetCurrency(ctx)
 	if err != nil {
 		return "", errors.Wrap(err, "currency not found")
 	}

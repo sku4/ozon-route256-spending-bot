@@ -30,8 +30,6 @@ func (s *Service) Categories(ctx context.Context, update tgbotapi.Update) (err e
 }
 
 func (s *Service) CategoryAdd(ctx context.Context, update tgbotapi.Update) (err error) {
-	_ = ctx
-
 	title := update.Message.CommandArguments()
 	if title == "" {
 		_ = s.client.SendMessage("Category title is empty, please set title", update.Message.Chat.ID)
@@ -51,8 +49,6 @@ func (s *Service) CategoryAdd(ctx context.Context, update tgbotapi.Update) (err 
 }
 
 func (s *Service) CategoriesQuery(ctx context.Context, update tgbotapi.Update) (err error) {
-	_ = ctx
-
 	var inlineKeyboardRows []*client.KeyboardRow
 	inlineKeyboardRow := client.NewKeyboardRow()
 

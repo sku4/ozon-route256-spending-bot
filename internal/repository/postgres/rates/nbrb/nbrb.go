@@ -53,14 +53,12 @@ func (rs *Rates) IsLoaded(ctx context.Context) bool {
 }
 
 func (rs *Rates) GetRate(ctx context.Context, curr *model.Currency) (*rates.Rate, bool) {
-	_ = ctx
-
 	rs.mutex.RLock()
 	defer rs.mutex.RUnlock()
 
 	r, ok := rs.m[curr]
-	if !ok && curr.Id == rs.reposCurr.GetDefault().Id {
-		defCur := rs.reposCurr.GetDefault()
+	if !ok && curr.Id == rs.reposCurr.GetDefault(ctx).Id {
+		defCur := rs.reposCurr.GetDefault(ctx)
 
 		return &rates.Rate{
 			Currency: defCur,
@@ -105,7 +103,7 @@ func (rs *Rates) UpdateRates(ctx context.Context) (err error) {
 
 	rs.mutex.Lock()
 	rateByn := float64(0)
-	currencyDef := rs.reposCurr.GetDefault()
+	currencyDef := rs.reposCurr.GetDefault(ctx)
 	for _, nbrbRate := range nbrbRates {
 		if nbrbRate.CurAbbreviation == currencyDef.Abbr {
 			rateByn = nbrbRate.CurOfficialRate / float64(nbrbRate.CurScale)
@@ -115,6 +113,7 @@ func (rs *Rates) UpdateRates(ctx context.Context) (err error) {
 
 	tx, err := rs.db.Begin()
 	if err != nil {
+		rs.mutex.Unlock()
 		return errors.Wrap(err, "nbrb tx begin")
 	}
 
@@ -123,14 +122,16 @@ func (rs *Rates) UpdateRates(ctx context.Context) (err error) {
 	if err != nil {
 		errRoll := tx.Rollback()
 		if errRoll != nil {
+			rs.mutex.Unlock()
 			return errors.Wrap(errRoll, "rollback")
 		}
+		rs.mutex.Unlock()
 		return errors.Wrap(err, "truncate rates")
 	}
 	rs.m = make(map[*model.Currency]*rates.Rate)
 
 	for _, nbrbRate := range nbrbRates {
-		curr, err := rs.reposCurr.GetByAbbr(nbrbRate.CurAbbreviation)
+		curr, err := rs.reposCurr.GetByAbbr(ctx, nbrbRate.CurAbbreviation)
 		if err != nil {
 			continue
 		}
@@ -142,8 +143,10 @@ func (rs *Rates) UpdateRates(ctx context.Context) (err error) {
 		if err != nil {
 			errRoll := tx.Rollback()
 			if errRoll != nil {
+				rs.mutex.Unlock()
 				return errors.Wrap(errRoll, "rollback")
 			}
+			rs.mutex.Unlock()
 			return errors.Wrap(err, "insert rate")
 		}
 
@@ -155,6 +158,7 @@ func (rs *Rates) UpdateRates(ctx context.Context) (err error) {
 
 	err = tx.Commit()
 	if err != nil {
+		rs.mutex.Unlock()
 		return errors.Wrap(err, "rates commit")
 	}
 	rs.lastUpdate = time.Now()

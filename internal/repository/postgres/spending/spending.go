@@ -52,11 +52,9 @@ func NewSpending(db *sqlx.DB, categorySearch category.Search) *Spending {
 }
 
 func (s *Spending) AddEvent(ctx context.Context, categoryId int, date time.Time, price float64) (eventId int, err error) {
-	_ = ctx
-
 	s.mutex.Lock()
 
-	cat, err := s.categorySearch.CategoryGetById(categoryId)
+	cat, err := s.categorySearch.CategoryGetById(ctx, categoryId)
 	if errors.Is(err, category.NotFoundError) {
 		s.mutex.Unlock()
 		return 0, errors.Wrap(err, "category not found")
@@ -64,7 +62,7 @@ func (s *Spending) AddEvent(ctx context.Context, categoryId int, date time.Time,
 
 	createCategoryQuery := fmt.Sprintf("INSERT INTO %s (category_id, event_at, price) values ($1, $2, $3) RETURNING id",
 		eventTable)
-	row := s.db.QueryRow(createCategoryQuery, cat.Id, date.Format("2006-01-02"), Float64ToPrice(price))
+	row := s.db.QueryRowContext(ctx, createCategoryQuery, cat.Id, date.Format("2006-01-02"), Float64ToPrice(price))
 	err = row.Scan(&eventId)
 	if err != nil {
 		s.mutex.Unlock()
@@ -77,12 +75,10 @@ func (s *Spending) AddEvent(ctx context.Context, categoryId int, date time.Time,
 }
 
 func (s *Spending) DeleteEvent(ctx context.Context, id int) (err error) {
-	_ = ctx
-
 	s.mutex.Lock()
 
 	query := fmt.Sprintf(`DELETE FROM %s WHERE id = $1`, eventTable)
-	_, err = s.db.Exec(query, id)
+	_, err = s.db.ExecContext(ctx, query, id)
 	if err != nil {
 		s.mutex.Unlock()
 		return errors.Wrap(err, "delete event")
@@ -94,32 +90,28 @@ func (s *Spending) DeleteEvent(ctx context.Context, id int) (err error) {
 }
 
 func (s Spending) Report(ctx context.Context, f1, f2 time.Time, rates rates.Client) (m map[int]float64, err error) {
-	_ = ctx
-
-	s.mutex.RLock()
 	stat := make(map[int]PriceFloat64)
 
-	var events []Event
+	var events []model.EventDB
 	query := fmt.Sprintf(`SELECT id, category_id, event_at, price FROM %s WHERE event_at BETWEEN '%s' AND '%s'`,
 		eventTable, f1.Format("2006-01-02"), f2.Format("2006-01-02"))
-	if err = s.db.Select(&events, query); err != nil {
+	if err = s.db.SelectContext(ctx, &events, query); err != nil {
 		return nil, errors.Wrap(err, "select report")
 	}
 
 	for _, event := range events {
-		stat[event.Category.Id] += event.Price
+		stat[event.CategoryId] += PriceFloat64(event.Price)
 	}
-	s.mutex.RUnlock()
 
 	userCtx, err := user.FromContext(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "user not found")
 	}
-	userState, err := userCtx.GetState()
+	userState, err := userCtx.GetState(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "user state")
 	}
-	userCurr, err := userState.GetCurrency()
+	userCurr, err := userState.GetCurrency(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "user currency")
 	}

@@ -1,6 +1,7 @@
 package currency
 
 import (
+	"context"
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
@@ -9,10 +10,10 @@ import (
 )
 
 type Client interface {
-	All() []*model.Currency
-	GetDefault() *model.Currency
-	GetByAbbr(string) (*model.Currency, error)
-	GetById(int) (*model.Currency, error)
+	All(context.Context) []*model.Currency
+	GetDefault(context.Context) *model.Currency
+	GetByAbbr(context.Context, string) (*model.Currency, error)
+	GetById(context.Context, int) (*model.Currency, error)
 }
 
 const (
@@ -52,21 +53,27 @@ func NewCurrencies(db *sqlx.DB) (*Currencies, error) {
 	return cs, nil
 }
 
-func (cs *Currencies) All() []*model.Currency {
+func (cs *Currencies) All(ctx context.Context) []*model.Currency {
+	_ = ctx
+
 	cs.mutex.RLock()
 	defer cs.mutex.RUnlock()
 
 	return cs.currencies
 }
 
-func (cs *Currencies) GetDefault() *model.Currency {
+func (cs *Currencies) GetDefault(ctx context.Context) *model.Currency {
+	_ = ctx
+
 	cs.mutex.RLock()
 	defer cs.mutex.RUnlock()
 
 	return cs.defaultCurrency
 }
 
-func (cs *Currencies) GetByAbbr(abbr string) (curr *model.Currency, err error) {
+func (cs *Currencies) GetByAbbr(ctx context.Context, abbr string) (curr *model.Currency, err error) {
+	_ = ctx
+
 	cs.mutex.RLock()
 	defer cs.mutex.RUnlock()
 
@@ -79,7 +86,9 @@ func (cs *Currencies) GetByAbbr(abbr string) (curr *model.Currency, err error) {
 	return nil, errors.New(fmt.Sprintf("currency '%s' not found", abbr))
 }
 
-func (cs *Currencies) GetById(id int) (curr *model.Currency, err error) {
+func (cs *Currencies) GetById(ctx context.Context, id int) (curr *model.Currency, err error) {
+	_ = ctx
+
 	cs.mutex.RLock()
 	defer cs.mutex.RUnlock()
 

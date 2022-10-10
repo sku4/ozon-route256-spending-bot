@@ -31,8 +31,8 @@ type Categories interface {
 }
 
 type Users interface {
-	AddUser(int) (*user.User, error)
-	GetById(int) (*user.User, error)
+	AddUser(context.Context, int) (*user.User, error)
+	GetById(context.Context, int) (*user.User, error)
 }
 
 type Repository struct {

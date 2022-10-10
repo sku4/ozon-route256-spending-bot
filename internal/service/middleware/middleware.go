@@ -32,7 +32,7 @@ func (m Middleware) DefineUser(ctx context.Context, update tgbotapi.Update) (con
 		userId = update.CallbackQuery.From.ID
 	}
 
-	u, err := m.users.AddUser(userId)
+	u, err := m.users.AddUser(ctx, userId)
 	if err != nil {
 		return nil, errors.Wrap(err, "define user")
 	}

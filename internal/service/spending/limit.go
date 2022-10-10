@@ -15,8 +15,6 @@ import (
 const limitPrefix = "limit_"
 
 func (s *Service) LimitAdd(ctx context.Context, update tgbotapi.Update) (err error) {
-	_ = ctx
-
 	priceArg := update.Message.CommandArguments()
 	priceLimit, err := strconv.ParseFloat(priceArg, 64)
 	if err != nil {
@@ -40,13 +38,13 @@ func (s *Service) LimitAdd(ctx context.Context, update tgbotapi.Update) (err err
 			"User not found: %s", err.Error()), update.CallbackQuery.Message.Chat.ID)
 		return errors.Wrap(err, "user not found")
 	}
-	uState, err := userCtx.GetState()
+	uState, err := userCtx.GetState(ctx)
 	if err != nil {
 		_ = s.client.SendMessage(fmt.Sprintf(
 			"State not found: %s", err.Error()), update.CallbackQuery.Message.Chat.ID)
 		return errors.Wrap(err, "state not found")
 	}
-	uCurrency, err := uState.GetCurrency()
+	uCurrency, err := uState.GetCurrency(ctx)
 	if err != nil {
 		_ = s.client.SendMessage(fmt.Sprintf(
 			"Currency not found: %s", err.Error()), update.CallbackQuery.Message.Chat.ID)
@@ -82,8 +80,6 @@ func (s *Service) LimitAdd(ctx context.Context, update tgbotapi.Update) (err err
 }
 
 func (s *Service) LimitQuery(ctx context.Context, update tgbotapi.Update) (err error) {
-	_ = ctx
-
 	var inlineKeyboardRows []*client.KeyboardRow
 
 	eventSer := update.CallbackQuery.Data[len(limitPrefix):]
@@ -92,7 +88,7 @@ func (s *Service) LimitQuery(ctx context.Context, update tgbotapi.Update) (err e
 		return errors.Wrap(err, "event unserialize")
 	}
 
-	catSelected, err := s.reposCat.CategoryGetById(event.CategoryId)
+	catSelected, err := s.reposCat.CategoryGetById(ctx, event.CategoryId)
 	if err != nil {
 		_ = s.client.SendMessage(fmt.Sprintf(
 			"Category not found: %s", err.Error()), update.CallbackQuery.Message.Chat.ID)
@@ -105,13 +101,13 @@ func (s *Service) LimitQuery(ctx context.Context, update tgbotapi.Update) (err e
 			"User not found: %s", err.Error()), update.CallbackQuery.Message.Chat.ID)
 		return errors.Wrap(err, "user not found")
 	}
-	uState, err := userCtx.GetState()
+	uState, err := userCtx.GetState(ctx)
 	if err != nil {
 		_ = s.client.SendMessage(fmt.Sprintf(
 			"State not found: %s", err.Error()), update.CallbackQuery.Message.Chat.ID)
 		return errors.Wrap(err, "state not found")
 	}
-	uCurrency, err := uState.GetCurrency()
+	uCurrency, err := uState.GetCurrency(ctx)
 	if err != nil {
 		_ = s.client.SendMessage(fmt.Sprintf(
 			"Currency not found: %s", err.Error()), update.CallbackQuery.Message.Chat.ID)
@@ -120,7 +116,11 @@ func (s *Service) LimitQuery(ctx context.Context, update tgbotapi.Update) (err e
 	userCurrAbbr := uCurrency.Abbr
 
 	if catSelected.Id > -1 {
-		err = uState.AddLimit(catSelected.Id, event.Price)
+		price, err := s.ConvertPrice(ctx, event.Price)
+		if err != nil {
+			return errors.Wrap(err, "limit convert price")
+		}
+		err = uState.AddLimit(ctx, catSelected.Id, price)
 		if err != nil {
 			_ = s.client.SendMessage(fmt.Sprintf(
 				"Limit not add: %s", err.Error()), update.CallbackQuery.Message.Chat.ID)
