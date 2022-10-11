@@ -48,20 +48,20 @@ func (d Decimal) Format(state fmt.State, verb rune) {
 		if precision, ok := state.Precision(); ok {
 			if precision > count {
 				precision -= count
-				fmt.Fprintf(state, "%s%d.%s%s", negativeSym, l, string(r), strings.Repeat("0", precision))
+				_, _ = fmt.Fprintf(state, "%s%d.%s%s", negativeSym, l, string(r), strings.Repeat("0", precision))
 			} else if precision == 0 {
-				fmt.Fprintf(state, "%s%d", negativeSym, l)
+				_, _ = fmt.Fprintf(state, "%s%d", negativeSym, l)
 			} else {
-				fmt.Fprintf(state, "%s%d.%s", negativeSym, l, string(r[0:precision]))
+				_, _ = fmt.Fprintf(state, "%s%d.%s", negativeSym, l, string(r[0:precision]))
 			}
 			return
 		}
 	}
 
 	if rm > 0 {
-		fmt.Fprintf(state, "%s%d.%s", negativeSym, l, string(r))
+		_, _ = fmt.Fprintf(state, "%s%d.%s", negativeSym, l, string(r))
 	} else {
-		fmt.Fprintf(state, "%s%d", negativeSym, l)
+		_, _ = fmt.Fprintf(state, "%s%d", negativeSym, l)
 	}
 }
 
