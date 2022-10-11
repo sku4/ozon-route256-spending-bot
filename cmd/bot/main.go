@@ -3,12 +3,14 @@ package main
 import (
 	"context"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
+	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 	"github.com/pkg/errors"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/configs"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/handler"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/rates"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/rates/nbrb"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/service"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/model/telegram/bot/client"
@@ -60,9 +62,7 @@ func main() {
 	if err != nil {
 		sugar.Fatalf("failed init repository: %s", err.Error())
 	}
-	ratesClient := nbrb.NewRates(db, repos.CurrencyClient)
-	ratesClient.UpdateRatesSync(ctx)
-
+	ratesClient := initRates(ctx, db, repos)
 	services := service.NewService(repos, tgClient, ratesClient)
 	handlers := handler.NewHandler(ctx, services)
 
@@ -98,4 +98,18 @@ func initTelegramBot(ctx context.Context, cfg *configs.Config) (tgClient *client
 	}
 
 	return
+}
+
+func initRates(ctx context.Context, db *sqlx.DB, repos *repository.Repository) rates.Client {
+	ratesClient := nbrb.NewRates(db, repos.CurrencyClient)
+	run := ratesClient.UpdateRatesSync(ctx)
+
+	if run {
+		go func() {
+			// read channel error
+			_ = <-ratesClient.SyncChan(ctx)
+		}()
+	}
+
+	return ratesClient
 }

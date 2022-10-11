@@ -92,6 +92,11 @@ func (s *Service) NotFound(ctx context.Context, update tgbotapi.Update) (err err
 }
 
 func (s *Service) SpendingAdd(ctx context.Context, update tgbotapi.Update) (err error) {
+	if !s.rates.IsLoaded(ctx) {
+		_ = s.client.SendMessage("Rates not loaded, please repeat later", update.Message.Chat.ID)
+		return errors.New("rates still not loaded")
+	}
+
 	priceArg := update.Message.CommandArguments()
 	price, err := strconv.ParseFloat(priceArg, 64)
 	if err != nil {
@@ -152,6 +157,11 @@ func (s *Service) SpendingAdd(ctx context.Context, update tgbotapi.Update) (err 
 }
 
 func (s *Service) SpendingAddQuery(ctx context.Context, update tgbotapi.Update) (err error) {
+	if !s.rates.IsLoaded(ctx) {
+		_ = s.client.SendMessage("Rates not loaded, please repeat later", update.Message.Chat.ID)
+		return errors.New("rates still not loaded")
+	}
+
 	var inlineKeyboardRows []*client.KeyboardRow
 	inlineKeyboardRow := client.NewKeyboardRow()
 
@@ -202,8 +212,6 @@ func (s *Service) SpendingAddQuery(ctx context.Context, update tgbotapi.Update) 
 		}
 		userRateDecimal := userRate.Rate
 		t := time.Date(event.Y, time.Month(event.M), event.D, 0, 0, 0, 0, now.Location())
-		// wait until rates will update
-		<-s.rates.SyncChan()
 		_, err = s.reposSpend.AddEvent(ctx, event.CategoryId, t, decimal.ToDecimal(event.Price).Multiply(userRateDecimal))
 		if err != nil {
 			_ = s.client.SendMessage(fmt.Sprintf(

@@ -29,7 +29,7 @@ type Rates struct {
 	lastUpdate time.Time
 	loaded     bool
 	mutex      *sync.RWMutex
-	syncChan   chan struct{}
+	syncChan   chan error
 	db         *sqlx.DB
 	reposCurr  currency.Client
 }
@@ -41,6 +41,7 @@ func NewRates(db *sqlx.DB, reposCurrencies currency.Client) *Rates {
 		db:        db,
 		reposCurr: reposCurrencies,
 		mutex:     &sync.RWMutex{},
+		syncChan:  make(chan error),
 	}
 }
 
@@ -71,10 +72,6 @@ func (rs *Rates) GetRate(ctx context.Context, curr *model.Currency) (*rates.Rate
 }
 
 func (rs *Rates) UpdateRates(ctx context.Context) (err error) {
-	if rs.lastUpdate.Add(updateTime).After(time.Now()) {
-		return nil
-	}
-
 	logger := log.LoggerFromContext(ctx)
 
 	resp, err := http.Get(nbrbRatesUrl)
@@ -170,14 +167,24 @@ func (rs *Rates) UpdateRates(ctx context.Context) (err error) {
 	return
 }
 
-func (rs *Rates) UpdateRatesSync(ctx context.Context) {
-	rs.syncChan = make(chan struct{})
+func (rs *Rates) UpdateRatesSync(ctx context.Context) (run bool) {
+	rs.mutex.RLock()
+	if rs.lastUpdate.Add(updateTime).After(time.Now()) {
+		rs.mutex.RUnlock()
+		return
+	}
+	rs.mutex.RUnlock()
+
 	go func(ctx context.Context, rates *Rates) {
-		_ = rates.UpdateRates(ctx)
-		rs.syncChan <- struct{}{}
+		err := rates.UpdateRates(ctx)
+		rs.syncChan <- err
 	}(ctx, rs)
+
+	return true
 }
 
-func (rs *Rates) SyncChan() chan struct{} {
+func (rs *Rates) SyncChan(ctx context.Context) <-chan error {
+	_ = ctx
+
 	return rs.syncChan
 }

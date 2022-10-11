@@ -36,6 +36,11 @@ func (s *Service) Currency(ctx context.Context, update tgbotapi.Update) (err err
 }
 
 func (s *Service) CurrencyQuery(ctx context.Context, update tgbotapi.Update) (err error) {
+	if !s.rates.IsLoaded(ctx) {
+		_ = s.client.SendMessage("Rates not loaded, please repeat later", update.Message.Chat.ID)
+		return errors.New("rates still not loaded")
+	}
+
 	var inlineKeyboardRows []*client.KeyboardRow
 
 	postfixCur, err := strconv.Atoi(update.CallbackQuery.Data[len(currencyPrefix):])

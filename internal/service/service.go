@@ -42,7 +42,8 @@ type Report interface {
 
 type Middleware interface {
 	DefineUser(context.Context, tgbotapi.Update) (context.Context, error)
-	UpdateRates(context.Context)
+	UpdateRatesSync(context.Context) bool
+	RatesSyncChan(context.Context) <-chan error
 }
 
 type Currency interface {

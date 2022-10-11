@@ -2,14 +2,31 @@ package handler
 
 import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
+	"github.com/pkg/errors"
 	"strings"
 )
 
 func (h *Handler) IncomingMessage(update tgbotapi.Update) (err error) {
-	h.services.Middleware.UpdateRates(h.ctx)
+	run := h.services.Middleware.UpdateRatesSync(h.ctx)
 	ctx, err := h.services.Middleware.DefineUser(h.ctx, update)
 	if err != nil {
-		return
+		return errors.Wrap(err, "incoming message define user")
+	}
+
+	if run {
+		req := requiredRates(update)
+		if req {
+			// wait until rates will update
+			err = <-h.services.Middleware.RatesSyncChan(ctx)
+			if err != nil {
+				return errors.Wrap(err, "incoming message rates sync")
+			}
+		} else {
+			go func() {
+				// read channel error
+				_ = <-h.services.Middleware.RatesSyncChan(ctx)
+			}()
+		}
 	}
 
 	if update.Message != nil {
@@ -46,6 +63,30 @@ func (h *Handler) IncomingMessage(update tgbotapi.Update) (err error) {
 			err = h.services.Spending.CurrencyQuery(ctx, update)
 		} else if strings.Index(update.CallbackQuery.Data, "limit") == 0 {
 			err = h.services.Spending.LimitQuery(ctx, update)
+		}
+	}
+
+	return
+}
+
+func requiredRates(update tgbotapi.Update) (req bool) {
+	if update.Message != nil {
+		if update.Message.IsCommand() {
+			switch update.Message.Command() {
+			case "spendingadd",
+				"report7",
+				"report31",
+				"report365",
+				"currency",
+				"limit":
+				req = true
+			}
+		}
+	} else if update.CallbackQuery != nil {
+		if strings.Index(update.CallbackQuery.Data, "spendingadd") == 0 ||
+			strings.Index(update.CallbackQuery.Data, "currency") == 0 ||
+			strings.Index(update.CallbackQuery.Data, "limit") == 0 {
+			req = true
 		}
 	}
 

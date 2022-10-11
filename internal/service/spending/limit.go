@@ -16,6 +16,11 @@ import (
 const limitPrefix = "limit_"
 
 func (s *Service) LimitAdd(ctx context.Context, update tgbotapi.Update) (err error) {
+	if !s.rates.IsLoaded(ctx) {
+		_ = s.client.SendMessage("Rates not loaded, please repeat later", update.Message.Chat.ID)
+		return errors.New("rates still not loaded")
+	}
+
 	priceArg := update.Message.CommandArguments()
 	priceLimit, err := strconv.ParseFloat(priceArg, 64)
 	if err != nil {
@@ -26,11 +31,6 @@ func (s *Service) LimitAdd(ctx context.Context, update tgbotapi.Update) (err err
 	if priceLimit <= 0 {
 		_ = s.client.SendMessage("Please set price over 0", update.Message.Chat.ID)
 		return errors.New("Price less than 0")
-	}
-
-	if !s.rates.IsLoaded(ctx) {
-		_ = s.client.SendMessage("Rates not loaded, please repeat later", update.Message.Chat.ID)
-		return errors.New("rates still not loaded")
 	}
 
 	userCtx, err := user.FromContext(ctx)
@@ -81,6 +81,11 @@ func (s *Service) LimitAdd(ctx context.Context, update tgbotapi.Update) (err err
 }
 
 func (s *Service) LimitQuery(ctx context.Context, update tgbotapi.Update) (err error) {
+	if !s.rates.IsLoaded(ctx) {
+		_ = s.client.SendMessage("Rates not loaded, please repeat later", update.Message.Chat.ID)
+		return errors.New("rates still not loaded")
+	}
+
 	var inlineKeyboardRows []*client.KeyboardRow
 
 	eventSer := update.CallbackQuery.Data[len(limitPrefix):]
