@@ -6,11 +6,11 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/pkg/errors"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/category_limit"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/currency"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/rates"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/model"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/model/telegram/bot/client"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/decimal"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/user"
 	"strconv"
 	"strings"
@@ -200,11 +200,11 @@ func (s *Service) SpendingAddQuery(ctx context.Context, update tgbotapi.Update) 
 				"Rate not found: %s", err.Error()), update.CallbackQuery.Message.Chat.ID)
 			return errors.Wrap(err, "rate not found")
 		}
-		userRateFloat64 := userRate.Rate.Float()
+		userRateDecimal := userRate.Rate
 		t := time.Date(event.Y, time.Month(event.M), event.D, 0, 0, 0, 0, now.Location())
 		// wait until rates will update
 		<-s.rates.SyncChan()
-		_, err = s.reposSpend.AddEvent(ctx, event.CategoryId, t, event.Price*userRateFloat64)
+		_, err = s.reposSpend.AddEvent(ctx, event.CategoryId, t, decimal.ToDecimal(event.Price).Multiply(userRateDecimal))
 		if err != nil {
 			_ = s.client.SendMessage(fmt.Sprintf(
 				"Error add event: %s", err.Error()), update.CallbackQuery.Message.Chat.ID)
@@ -337,7 +337,7 @@ func (s *Service) SpendingAddQuery(ctx context.Context, update tgbotapi.Update) 
 	return
 }
 
-func (s *Service) GetRateUserFloat(ctx context.Context) (r rates.RateFloat64, err error) {
+func (s *Service) GetRateUserFloat(ctx context.Context) (r decimal.Decimal, err error) {
 	userCtx, err := user.FromContext(ctx)
 	if err != nil {
 		return 0, errors.Wrap(err, "user not found")
@@ -358,13 +358,13 @@ func (s *Service) GetRateUserFloat(ctx context.Context) (r rates.RateFloat64, er
 	return userRate.Rate, nil
 }
 
-func (s *Service) ConvertPrice(ctx context.Context, price float64) (f float64, err error) {
+func (s *Service) ConvertPrice(ctx context.Context, price decimal.Decimal) (f decimal.Decimal, err error) {
 	userRateFloat64, err := s.GetRateUserFloat(ctx)
 	if err != nil {
 		return 0, errors.Wrap(err, "convert price")
 	}
 
-	return userRateFloat64.Float() * price, nil
+	return userRateFloat64.Multiply(price), nil
 }
 
 func (s *Service) checkLimitPrice(ctx context.Context, category model.Category) (mess string, err error) {
@@ -385,7 +385,7 @@ func (s *Service) checkLimitPrice(ctx context.Context, category model.Category) 
 	if err != nil {
 		return "", errors.Wrap(err, "check limit price get limits")
 	}
-	categoryLimit := category_limit.LimitFloat64(0)
+	categoryLimit := decimal.Decimal(0)
 	for _, limit := range limits {
 		if limit.Category.Id == category.Id {
 			categoryLimit = limit.Limit
@@ -406,11 +406,11 @@ func (s *Service) checkLimitPrice(ctx context.Context, category model.Category) 
 			if err != nil {
 				return "", errors.Wrap(err, "convert price")
 			}
-			sum = sum * userRateFloat64.Float()
-			if sum > categoryLimit.Float() {
+			sum = sum.Multiply(userRateFloat64)
+			if sum > categoryLimit {
 				mess = fmt.Sprintf("Sum *%.2f %s* by category *%s* over than *%.2f %s*",
-					sum/userRateFloat64.Float(), uCurrency.Abbr,
-					category.Title, categoryLimit.Float()/userRateFloat64.Float(), uCurrency.Abbr)
+					sum.Divide(userRateFloat64), uCurrency.Abbr,
+					category.Title, categoryLimit.Divide(userRateFloat64), uCurrency.Abbr)
 			}
 		}
 	}

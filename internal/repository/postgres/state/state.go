@@ -8,6 +8,7 @@ import (
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/category_limit"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/currency"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/model"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/decimal"
 	"sync"
 )
 
@@ -62,7 +63,7 @@ func (s *State) GetCurrency(ctx context.Context) (c *model.Currency, err error) 
 	return s.Currency, nil
 }
 
-func (s *State) AddLimit(ctx context.Context, categoryId int, limit float64) (err error) {
+func (s *State) AddLimit(ctx context.Context, categoryId int, limit decimal.Decimal) (err error) {
 	_, err = s.reposCatLimitSet.Set(ctx, s.Id, categoryId, limit)
 
 	return

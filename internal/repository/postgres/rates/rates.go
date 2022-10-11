@@ -3,10 +3,7 @@ package rates
 import (
 	"context"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/model"
-)
-
-const (
-	decimalFactor float64 = 10000
+	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/decimal"
 )
 
 type Client interface {
@@ -19,19 +16,5 @@ type Client interface {
 
 type Rate struct {
 	*model.Currency
-	Rate RateFloat64
-}
-
-type RateFloat64 int64
-
-func (p RateFloat64) Original() int64 {
-	return int64(p)
-}
-
-func (p RateFloat64) Float() float64 {
-	return float64(p) / decimalFactor
-}
-
-func Float64ToRate(f float64) RateFloat64 {
-	return RateFloat64(f * decimalFactor)
+	Rate decimal.Decimal
 }

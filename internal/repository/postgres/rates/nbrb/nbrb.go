@@ -10,6 +10,7 @@ import (
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/rates"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/model"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/model/nbrb"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/decimal"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/log"
 	"io"
 	"net/http"
@@ -139,7 +140,7 @@ func (rs *Rates) UpdateRates(ctx context.Context) (err error) {
 		r := rate / rateByn
 
 		insertRateQuery := fmt.Sprintf("INSERT INTO %s (currency_id, rate) values ($1, $2)", rateTable)
-		_, err = tx.Exec(insertRateQuery, curr.Id, rates.Float64ToRate(r))
+		_, err = tx.Exec(insertRateQuery, curr.Id, decimal.ToDecimal(r))
 		if err != nil {
 			errRoll := tx.Rollback()
 			if errRoll != nil {
@@ -152,7 +153,7 @@ func (rs *Rates) UpdateRates(ctx context.Context) (err error) {
 
 		rs.m[curr] = &rates.Rate{
 			Currency: curr,
-			Rate:     rates.Float64ToRate(r),
+			Rate:     decimal.ToDecimal(r),
 		}
 	}
 

@@ -12,15 +12,16 @@ import (
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/state"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/user"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/model"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/decimal"
 	"time"
 )
 
 //go:generate mockgen -source=repository.go -destination=mocks/repository.go
 
 type Spending interface {
-	AddEvent(context.Context, int, time.Time, float64) (int, error)
+	AddEvent(context.Context, int, time.Time, decimal.Decimal) (int, error)
 	DeleteEvent(context.Context, int) error
-	Report(context.Context, time.Time, time.Time, rates.Client) (map[int]float64, error)
+	Report(context.Context, time.Time, time.Time, rates.Client) (map[int]decimal.Decimal, error)
 }
 
 type Categories interface {

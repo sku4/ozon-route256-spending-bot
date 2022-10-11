@@ -7,16 +7,16 @@ import (
 	"github.com/pkg/errors"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/category"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/model"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/decimal"
 )
 
 type CategoryLimitSet interface {
-	Set(ctx context.Context, stateId, categoryId int, limit float64) (*CategoryLimit, error)
+	Set(ctx context.Context, stateId, categoryId int, limit decimal.Decimal) (*CategoryLimit, error)
 	GetByState(ctx context.Context, stateId int) ([]*CategoryLimit, error)
 }
 
 const (
 	categoryLimitTable = "category_limit"
-	decimalFactor      = 100
 )
 
 var (
@@ -25,7 +25,7 @@ var (
 
 type CategoryLimit struct {
 	model.CategoryLimit
-	Limit          LimitFloat64
+	Limit          decimal.Decimal
 	db             *sqlx.DB
 	categorySearch category.Search
 }
@@ -37,18 +37,18 @@ func NewCategoryLimit(db *sqlx.DB, categorySearch category.Search) *CategoryLimi
 	}
 }
 
-func (cl *CategoryLimit) Set(ctx context.Context, stateId, categoryId int, limit float64) (s *CategoryLimit, err error) {
+func (cl *CategoryLimit) Set(ctx context.Context, stateId, categoryId int, limit decimal.Decimal) (s *CategoryLimit, err error) {
 	categoryLimitState, err := cl.GetByStateCategory(ctx, stateId, categoryId)
 	if err != nil && !errors.Is(err, limitNotFoundError) {
 		return nil, errors.Wrap(err, "limit set")
 	} else if err == nil {
 		// update limit
 		query := fmt.Sprintf(`UPDATE %s SET category_limit = $1 WHERE id = $2`, categoryLimitTable)
-		_, err = cl.db.ExecContext(ctx, query, Float64ToLimit(limit), categoryLimitState.Id)
+		_, err = cl.db.ExecContext(ctx, query, limit.Original(), categoryLimitState.Id)
 		if err != nil {
 			return nil, errors.Wrap(err, "limit update")
 		}
-		categoryLimitState.Limit = Float64ToLimit(limit)
+		categoryLimitState.Limit = limit
 		return categoryLimitState, nil
 	}
 
@@ -60,7 +60,7 @@ func (cl *CategoryLimit) Set(ctx context.Context, stateId, categoryId int, limit
 	var categoryLimitId int
 	createLimitQuery := fmt.Sprintf(`INSERT INTO %s (state_id, category_id, category_limit) 
 												values ($1, $2, $3) RETURNING id`, categoryLimitTable)
-	row := cl.db.QueryRowContext(ctx, createLimitQuery, stateId, cat.Id, Float64ToLimit(limit))
+	row := cl.db.QueryRowContext(ctx, createLimitQuery, stateId, cat.Id, limit.Original())
 	err = row.Scan(&categoryLimitId)
 	if err != nil {
 		return nil, errors.Wrap(err, "insert limit")
@@ -71,7 +71,7 @@ func (cl *CategoryLimit) Set(ctx context.Context, stateId, categoryId int, limit
 			Id:       categoryLimitId,
 			Category: cat,
 		},
-		Limit: Float64ToLimit(limit),
+		Limit: limit,
 	}, nil
 }
 
@@ -93,7 +93,7 @@ func (cl *CategoryLimit) GetById(ctx context.Context, id int) (c *CategoryLimit,
 			Id:       categoryLimitDB.Id,
 			Category: cat,
 		},
-		Limit:          LimitFloat64(categoryLimitDB.Limit),
+		Limit:          decimal.ToDecimal(categoryLimitDB.Limit),
 		db:             cl.db,
 		categorySearch: cl.categorySearch,
 	}
@@ -119,7 +119,7 @@ func (cl *CategoryLimit) GetByStateCategory(ctx context.Context, stateId, catego
 			Id:       categoryLimitDB.Id,
 			Category: cat,
 		},
-		Limit:          LimitFloat64(categoryLimitDB.Limit),
+		Limit:          decimal.ToDecimal(categoryLimitDB.Limit),
 		db:             cl.db,
 		categorySearch: cl.categorySearch,
 	}
@@ -146,7 +146,7 @@ func (cl *CategoryLimit) GetByState(ctx context.Context, stateId int) (cls []*Ca
 				Id:       limitDB.Id,
 				Category: cat,
 			},
-			Limit:          LimitFloat64(limitDB.Limit),
+			Limit:          decimal.ToDecimal(limitDB.Limit),
 			db:             cl.db,
 			categorySearch: cl.categorySearch,
 		}
@@ -154,18 +154,4 @@ func (cl *CategoryLimit) GetByState(ctx context.Context, stateId int) (cls []*Ca
 	}
 
 	return
-}
-
-type LimitFloat64 int64
-
-func (p LimitFloat64) Original() int64 {
-	return int64(p)
-}
-
-func (p LimitFloat64) Float() float64 {
-	return float64(p) / decimalFactor
-}
-
-func Float64ToLimit(f float64) LimitFloat64 {
-	return LimitFloat64(f * decimalFactor)
 }

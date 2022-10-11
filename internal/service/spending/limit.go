@@ -6,6 +6,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/pkg/errors"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/model/telegram/bot/client"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/decimal"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/user"
 	"strconv"
 )
@@ -116,7 +117,7 @@ func (s *Service) LimitQuery(ctx context.Context, update tgbotapi.Update) (err e
 	userCurrAbbr := uCurrency.Abbr
 
 	if catSelected.Id > -1 {
-		price, err := s.ConvertPrice(ctx, event.Price)
+		price, err := s.ConvertPrice(ctx, decimal.ToDecimal(event.Price))
 		if err != nil {
 			return errors.Wrap(err, "limit convert price")
 		}
