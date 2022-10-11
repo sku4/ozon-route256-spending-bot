@@ -11,7 +11,7 @@ create table rate
 (
     id          int generated always as identity,
     currency_id int,
-    rate        int,
+    rate        bigint,
     primary key (id),
     constraint fk_rate_currency
         foreign key (currency_id)
@@ -55,7 +55,7 @@ create table event
     id          int generated always as identity,
     category_id int,
     event_at    date      not null,
-    price       int,
+    price       bigint,
     created_at  timestamp not null default now(),
     primary key (id),
     constraint fk_event_category
@@ -69,7 +69,7 @@ create table category_limit
     id             int generated always as identity,
     state_id       int references state (id) on delete cascade,
     category_id    int references category (id) on delete cascade,
-    category_limit int,
+    category_limit bigint,
     primary key (id)
 );
 

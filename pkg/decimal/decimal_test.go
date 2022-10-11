@@ -148,4 +148,13 @@ func TestToDecimal(t *testing.T) {
 			t.Errorf("ToDecimal() = %v, want %v", got, want)
 		}
 	})
+	t.Run("divide", func(t *testing.T) {
+		dec1 := ToDecimal(10055)
+		dec2 := ToDecimal(100)
+		got := fmt.Sprintf("%.15f", dec1.Divide(dec2))
+		want := "100.550000000000000"
+		if got != want {
+			t.Errorf("ToDecimal() = %v, want %v", got, want)
+		}
+	})
 }
