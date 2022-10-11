@@ -24,7 +24,7 @@ func (h *Handler) IncomingMessage(update tgbotapi.Update) (err error) {
 		} else {
 			go func() {
 				// read channel error
-				_ = <-h.services.Middleware.RatesSyncChan(ctx)
+				<-h.services.Middleware.RatesSyncChan(ctx)
 			}()
 		}
 	}

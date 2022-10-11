@@ -107,7 +107,7 @@ func initRates(ctx context.Context, db *sqlx.DB, repos *repository.Repository) r
 	if run {
 		go func() {
 			// read channel error
-			_ = <-ratesClient.SyncChan(ctx)
+			<-ratesClient.SyncChan(ctx)
 		}()
 	}
 
