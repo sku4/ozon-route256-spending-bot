@@ -14,6 +14,7 @@ import (
 
 type Spending interface {
 	Start(context.Context, tgbotapi.Update) error
+	ErrorMessage(context.Context, tgbotapi.Update, string) error
 	NotFound(context.Context, tgbotapi.Update) error
 	SpendingAdd(context.Context, tgbotapi.Update) error
 	SpendingAddQuery(context.Context, tgbotapi.Update) error

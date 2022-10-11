@@ -19,6 +19,10 @@ func (h *Handler) IncomingMessage(update tgbotapi.Update) (err error) {
 			// wait until rates will update
 			err = <-h.services.Middleware.RatesSyncChan(ctx)
 			if err != nil {
+				errMess := h.services.Spending.ErrorMessage(ctx, update, err.Error())
+				if errMess != nil {
+					return errors.Wrap(err, "incoming message rates sync")
+				}
 				return errors.Wrap(err, "incoming message rates sync")
 			}
 		} else {

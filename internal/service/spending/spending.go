@@ -80,6 +80,17 @@ func (s *Service) Start(ctx context.Context, update tgbotapi.Update) (err error)
 	return
 }
 
+func (s *Service) ErrorMessage(ctx context.Context, update tgbotapi.Update, message string) (err error) {
+	_ = ctx
+
+	err = s.client.SendMessage(message, update.Message.Chat.ID)
+	if err != nil {
+		return err
+	}
+
+	return
+}
+
 func (s *Service) NotFound(ctx context.Context, update tgbotapi.Update) (err error) {
 	_ = ctx
 
