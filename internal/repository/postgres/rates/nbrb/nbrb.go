@@ -140,7 +140,7 @@ func (rs *Rates) UpdateRates(ctx context.Context) (err error) {
 		r := rate / rateByn
 
 		insertRateQuery := fmt.Sprintf("INSERT INTO %s (currency_id, rate) values ($1, $2)", rateTable)
-		_, err = tx.Exec(insertRateQuery, curr.Id, decimal.ToDecimal(r))
+		_, err = tx.Exec(insertRateQuery, curr.Id, decimal.ToDecimal(r).Original())
 		if err != nil {
 			errRoll := tx.Rollback()
 			if errRoll != nil {

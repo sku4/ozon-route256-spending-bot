@@ -2,9 +2,9 @@
 -- +goose StatementBegin
 insert into event(category_id, event_at, price)
 values (1, '2022-10-09', 100000),
-       (1, '2022-10-09', 1500),
-       (2, '2022-10-08', 56800),
-       (2, '2022-10-08', 576013);
+       (1, '2022-10-09', 150000),
+       (2, '2022-10-08', 5680000),
+       (2, '2022-10-08', 57601300);
 -- +goose StatementEnd
 
 -- +goose Down

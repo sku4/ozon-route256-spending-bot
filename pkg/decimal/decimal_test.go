@@ -85,6 +85,12 @@ func TestToDecimal(t *testing.T) {
 		if got != want {
 			t.Errorf("ToDecimal() = %v, want %v", got, want)
 		}
+		dec = ToDecimal(2)
+		got = fmt.Sprint(dec)
+		want = "2"
+		if got != want {
+			t.Errorf("ToDecimal() = %v, want %v", got, want)
+		}
 	})
 	t.Run("int64 negative", func(t *testing.T) {
 		dec := ToDecimal(int64(-123456))

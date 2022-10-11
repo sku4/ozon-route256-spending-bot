@@ -86,7 +86,7 @@ func (s Spending) Report(ctx context.Context, f1, f2 time.Time, rates rates.Clie
 	}
 
 	for _, event := range events {
-		stat[event.CategoryId] += decimal.ToDecimal(event.Price)
+		stat[event.CategoryId] += decimal.Decimal(event.Price)
 	}
 
 	userCtx, err := user.FromContext(ctx)

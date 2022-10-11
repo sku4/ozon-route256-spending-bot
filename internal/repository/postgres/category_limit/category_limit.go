@@ -93,7 +93,7 @@ func (cl *CategoryLimit) GetById(ctx context.Context, id int) (c *CategoryLimit,
 			Id:       categoryLimitDB.Id,
 			Category: cat,
 		},
-		Limit:          decimal.ToDecimal(categoryLimitDB.Limit),
+		Limit:          decimal.Decimal(categoryLimitDB.Limit),
 		db:             cl.db,
 		categorySearch: cl.categorySearch,
 	}
@@ -119,7 +119,7 @@ func (cl *CategoryLimit) GetByStateCategory(ctx context.Context, stateId, catego
 			Id:       categoryLimitDB.Id,
 			Category: cat,
 		},
-		Limit:          decimal.ToDecimal(categoryLimitDB.Limit),
+		Limit:          decimal.Decimal(categoryLimitDB.Limit),
 		db:             cl.db,
 		categorySearch: cl.categorySearch,
 	}
@@ -146,7 +146,7 @@ func (cl *CategoryLimit) GetByState(ctx context.Context, stateId int) (cls []*Ca
 				Id:       limitDB.Id,
 				Category: cat,
 			},
-			Limit:          decimal.ToDecimal(limitDB.Limit),
+			Limit:          decimal.Decimal(limitDB.Limit),
 			db:             cl.db,
 			categorySearch: cl.categorySearch,
 		}
