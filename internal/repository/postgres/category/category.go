@@ -70,7 +70,7 @@ func (s *Category) CategoryGetById(ctx context.Context, id int) (cat *model.Cate
 	var c model.Category
 	query := fmt.Sprintf(`SELECT id, title FROM %s WHERE id = %d`, categoryTable, id)
 	if err = s.db.GetContext(ctx, &c, query); err != nil {
-		return nil, errors.Wrap(NotFoundError, fmt.Sprintf("category '%d' not found", id))
+		return nil, NotFoundError
 	}
 
 	return &c, nil
@@ -80,7 +80,7 @@ func (s *Category) CategoryGetByTitle(ctx context.Context, title string) (cat *m
 	var c model.Category
 	query := fmt.Sprintf(`SELECT id, title FROM %s WHERE title = '%s'`, categoryTable, title)
 	if err = s.db.GetContext(ctx, &c, query); err != nil {
-		return nil, errors.Wrap(NotFoundError, fmt.Sprintf("category '%s' not found", title))
+		return nil, NotFoundError
 	}
 
 	return &c, nil
