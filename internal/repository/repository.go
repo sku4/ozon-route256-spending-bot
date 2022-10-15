@@ -26,8 +26,8 @@ type Spending interface {
 
 type Categories interface {
 	Categories(context.Context) ([]model.Category, error)
-	AddCategory(context.Context, string) ([]model.Category, error)
-	DeleteCategory(context.Context, int) ([]model.Category, error)
+	AddCategory(context.Context, string) (int, error)
+	DeleteCategory(context.Context, int) error
 	category.Search
 }
 
