@@ -7,15 +7,19 @@ TelegramBotToken: "<token>"
 
 Postgres:
   username: "postgres"
-  host: "localhost"
-  port: "5432"
   dbname: "postgres"
+  port: "5432"
   sslmode: "disable"
+
+Test:
+  TelegramBotToken: "<test_token>"
+  TelegramBotChatId: 123456789
 ```
 Example environment file ```.env```:
 
 ```shell
-POSTGRES_PASSWORD=mysecretpassword
+POSTGRES_HOST=localhost
+POSTGRES_PASSWORD=postgres
 ```
 ## Available commands:
 - /categories

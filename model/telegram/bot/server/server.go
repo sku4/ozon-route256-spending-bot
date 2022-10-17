@@ -31,7 +31,7 @@ func (s *Server) Run(h *handler.Handler) error {
 	updates, _ := s.client.GetUpdatesChan(u)
 
 	sugar := s.logger.Sugar()
-	sugar.Info("listening for messages")
+	sugar.Info("Listening for messages")
 
 	for update := range updates {
 		if update.Message != nil {

@@ -4,6 +4,7 @@ import (
 	"context"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/jmoiron/sqlx"
+	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	"github.com/pkg/errors"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/configs"
@@ -46,13 +47,17 @@ func main() {
 		sugar.Fatalf("error init telegram bot: %s", err.Error())
 	}
 
+	if err = godotenv.Load(); err != nil {
+		sugar.Fatalf("error loading env variables: %s", err.Error())
+	}
+
 	db, err := postgres.NewPostgresDB(postgres.Config{
-		Host:     cfg.Host,
+		Host:     os.Getenv("POSTGRES_HOST"),
 		Port:     cfg.Port,
 		Username: cfg.Username,
 		DBName:   cfg.DBName,
 		SslMode:  cfg.SslMode,
-		Password: cfg.Password,
+		Password: os.Getenv("POSTGRES_PASSWORD"),
 	})
 	if err != nil {
 		sugar.Fatalf("failed to initialize db: %s", err.Error())
