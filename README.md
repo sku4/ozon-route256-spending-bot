@@ -12,8 +12,15 @@ Postgres:
   sslmode: "disable"
 
 Test:
-  TelegramBotToken: "<test_token>"
-  TelegramBotChatId: 123456789
+  Telegram:
+    BotToken: "<test_token>"
+    ChatId: 123456789
+    UserId: 123456789
+  Postgres:
+    username: "postgres"
+    dbname: "postgres"
+    port: "5433"
+    sslmode: "disable"
 ```
 Example environment file ```.env```:
 
@@ -40,4 +47,9 @@ Before first exec:
 
 ```
 make goose-up
+```
+## Integration tests:
+```
+docker compose up
+go test ./... -tags integration
 ```

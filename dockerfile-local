@@ -4,6 +4,6 @@ RUN apk --no-cache add ca-certificates
 WORKDIR /root/
 
 COPY ./.bin/app .
-COPY ./configs/config.yml ./configs/config.yml
+COPY configs/config.yml ./configs/config.yml
 
 CMD ["./app"]
