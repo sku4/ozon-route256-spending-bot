@@ -66,7 +66,7 @@ func (s *Service) LimitAdd(ctx context.Context, update tgbotapi.Update) (err err
 	}
 	for _, c := range cats {
 		event.CategoryId = c.Id
-		eventSer := eventSerialize(event)
+		eventSer := EventSerialize(event)
 		inlineKeyboardRow.Add(c.Title, limitPrefix+string(eventSer))
 	}
 	inlineKeyboardRows = append(inlineKeyboardRows, inlineKeyboardRow)
