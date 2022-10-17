@@ -5,13 +5,13 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
-	"github.com/spf13/viper"
 	sqlmock "github.com/zhashkevych/go-sqlxmock"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/currency"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/rates"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/rates/nbrb"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/model/telegram/bot/client"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/configtest"
 	"strings"
 )
 
@@ -20,7 +20,7 @@ type ServiceTest struct {
 	Service *Service
 	DB      *sqlx.DB
 	Mock    sqlmock.Sqlmock
-	Cfg     *ConfigTest
+	Cfg     *configtest.ConfigTest
 }
 
 func NewServiceTest(ctx context.Context) (st *ServiceTest, service *Service, mock sqlmock.Sqlmock, err error) {
@@ -32,7 +32,7 @@ func NewServiceTest(ctx context.Context) (st *ServiceTest, service *Service, moc
 		return nil, nil, nil, err
 	}
 
-	st.Cfg, _ = initConfigTest()
+	st.Cfg, _ = configtest.InitConfigTest()
 	tgClient, _ := st.initTelegramBot()
 	st.initMock()
 
@@ -101,29 +101,4 @@ func (st *ServiceTest) TgBotMessageCommand(cmd string, args ...string) (update t
 	}
 
 	return
-}
-
-type ConfigTest struct {
-	TelegramBot `mapstructure:"Test"`
-}
-
-type TelegramBot struct {
-	Token  string `mapstructure:"TelegramBotToken"`
-	ChatId int64  `mapstructure:"TelegramBotChatId"`
-}
-
-func initConfigTest() (*ConfigTest, error) {
-	mainViper := viper.New()
-	mainViper.AddConfigPath("../../../configs")
-	if err := mainViper.ReadInConfig(); err != nil {
-		return nil, err
-	}
-
-	var cfg ConfigTest
-
-	if err := mainViper.Unmarshal(&cfg); err != nil {
-		return nil, errors.Wrap(err, "config viper unmarshal")
-	}
-
-	return &cfg, nil
 }

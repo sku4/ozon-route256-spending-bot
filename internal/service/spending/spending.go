@@ -58,7 +58,7 @@ func NewService(reposSpending repository.Spending, reposCategories repository.Ca
 	}
 }
 
-const spendingAddPrefix = "spendingadd_"
+const AddPrefix = "spendingadd_"
 
 func (s *Service) Start(ctx context.Context, update tgbotapi.Update) (err error) {
 	_ = ctx
@@ -153,8 +153,8 @@ func (s *Service) SpendingAdd(ctx context.Context, update tgbotapi.Update) (err 
 	}
 	for _, category := range categories {
 		event.CategoryId = category.Id
-		eventSer := eventSerialize(event)
-		inlineKeyboardRow.Add(category.Title, spendingAddPrefix+string(eventSer))
+		eventSer := EventSerialize(event)
+		inlineKeyboardRow.Add(category.Title, AddPrefix+string(eventSer))
 	}
 	inlineKeyboardRows = append(inlineKeyboardRows, inlineKeyboardRow)
 
@@ -176,7 +176,7 @@ func (s *Service) SpendingAddQuery(ctx context.Context, update tgbotapi.Update) 
 	var inlineKeyboardRows []*client.KeyboardRow
 	inlineKeyboardRow := client.NewKeyboardRow()
 
-	eventSer := update.CallbackQuery.Data[len(spendingAddPrefix):]
+	eventSer := update.CallbackQuery.Data[len(AddPrefix):]
 	event, err := eventUnserialize(eventSer)
 	if err != nil {
 		return errors.Wrap(err, "event unserialize")
@@ -249,15 +249,15 @@ func (s *Service) SpendingAddQuery(ctx context.Context, update tgbotapi.Update) 
 		countDays := t.Day()
 		for i := 1; i <= countDays; i++ {
 			event.D = i
-			eventSer = eventSerialize(event)
-			inlineKeyboardRow.Add(strconv.Itoa(i), spendingAddPrefix+string(eventSer))
+			eventSer = EventSerialize(event)
+			inlineKeyboardRow.Add(strconv.Itoa(i), AddPrefix+string(eventSer))
 		}
 
 		event.D = -1
 		event.M = -1
-		eventSer = eventSerialize(event)
+		eventSer = EventSerialize(event)
 		inlineKeyboardRow2 := client.NewKeyboardRow()
-		inlineKeyboardRow2.Add("<< Back", spendingAddPrefix+string(eventSer))
+		inlineKeyboardRow2.Add("<< Back", AddPrefix+string(eventSer))
 		inlineKeyboardRows = append(inlineKeyboardRows, inlineKeyboardRow, inlineKeyboardRow2)
 		err = s.client.SendCallbackQuery(inlineKeyboardRows, msg,
 			update.CallbackQuery.Message.MessageID, update.CallbackQuery.Message.Chat.ID)
@@ -270,8 +270,8 @@ func (s *Service) SpendingAddQuery(ctx context.Context, update tgbotapi.Update) 
 			m := firstMonth.Format("Jan")
 			firstMonth = firstMonth.AddDate(0, 1, 0)
 			event.M = i
-			eventSer = eventSerialize(event)
-			inlineKeyboardRow.Add(m, spendingAddPrefix+string(eventSer))
+			eventSer = EventSerialize(event)
+			inlineKeyboardRow.Add(m, AddPrefix+string(eventSer))
 			if i == 6 {
 				inlineKeyboardRows = append(inlineKeyboardRows, inlineKeyboardRow)
 				inlineKeyboardRow = client.NewKeyboardRow()
@@ -280,9 +280,9 @@ func (s *Service) SpendingAddQuery(ctx context.Context, update tgbotapi.Update) 
 
 		event.M = -1
 		event.Y = -1
-		eventSer = eventSerialize(event)
+		eventSer = EventSerialize(event)
 		inlineKeyboardRow2 := client.NewKeyboardRow()
-		inlineKeyboardRow2.Add("<< Back", spendingAddPrefix+string(eventSer))
+		inlineKeyboardRow2.Add("<< Back", AddPrefix+string(eventSer))
 		inlineKeyboardRows = append(inlineKeyboardRows, inlineKeyboardRow, inlineKeyboardRow2)
 		err = s.client.SendCallbackQuery(inlineKeyboardRows, msg,
 			update.CallbackQuery.Message.MessageID, update.CallbackQuery.Message.Chat.ID)
@@ -292,15 +292,15 @@ func (s *Service) SpendingAddQuery(ctx context.Context, update tgbotapi.Update) 
 		years := []int{now.Year() - 1, now.Year(), now.Year() + 1}
 		for _, year := range years {
 			event.Y = year
-			eventSer = eventSerialize(event)
-			inlineKeyboardRow.Add(strconv.Itoa(year), spendingAddPrefix+string(eventSer))
+			eventSer = EventSerialize(event)
+			inlineKeyboardRow.Add(strconv.Itoa(year), AddPrefix+string(eventSer))
 		}
 
 		event.Y = -1
 		event.SelectedToday = false
-		eventSer = eventSerialize(event)
+		eventSer = EventSerialize(event)
 		inlineKeyboardRow2 := client.NewKeyboardRow()
-		inlineKeyboardRow2.Add("<< Back", spendingAddPrefix+string(eventSer))
+		inlineKeyboardRow2.Add("<< Back", AddPrefix+string(eventSer))
 		inlineKeyboardRows = append(inlineKeyboardRows, inlineKeyboardRow, inlineKeyboardRow2)
 		err = s.client.SendCallbackQuery(inlineKeyboardRows, msg,
 			update.CallbackQuery.Message.MessageID, update.CallbackQuery.Message.Chat.ID)
@@ -312,19 +312,19 @@ func (s *Service) SpendingAddQuery(ctx context.Context, update tgbotapi.Update) 
 		event.D = now.Day()
 		event.M = int(now.Month())
 		event.Y = now.Year()
-		eventSer = eventSerialize(event)
-		inlineKeyboardRow.Add("Today", spendingAddPrefix+string(eventSer))
+		eventSer = EventSerialize(event)
+		inlineKeyboardRow.Add("Today", AddPrefix+string(eventSer))
 		event.Today = false
 		event.D = -1
 		event.M = -1
 		event.Y = -1
-		eventSer = eventSerialize(event)
-		inlineKeyboardRow.Add("Choose date", spendingAddPrefix+string(eventSer))
+		eventSer = EventSerialize(event)
+		inlineKeyboardRow.Add("Choose date", AddPrefix+string(eventSer))
 		event.SelectedToday = false
 		event.CategoryId = -1
-		eventSer = eventSerialize(event)
+		eventSer = EventSerialize(event)
 		inlineKeyboardRow2 := client.NewKeyboardRow()
-		inlineKeyboardRow2.Add("<< Back", spendingAddPrefix+string(eventSer))
+		inlineKeyboardRow2.Add("<< Back", AddPrefix+string(eventSer))
 		inlineKeyboardRows = append(inlineKeyboardRows, inlineKeyboardRow, inlineKeyboardRow2)
 		err = s.client.SendCallbackQuery(inlineKeyboardRows, msg,
 			update.CallbackQuery.Message.MessageID, update.CallbackQuery.Message.Chat.ID)
@@ -342,8 +342,8 @@ func (s *Service) SpendingAddQuery(ctx context.Context, update tgbotapi.Update) 
 		}
 		for _, c := range categories {
 			event.CategoryId = c.Id
-			eventSer = eventSerialize(event)
-			inlineKeyboardRow.Add(c.Title, spendingAddPrefix+string(eventSer))
+			eventSer = EventSerialize(event)
+			inlineKeyboardRow.Add(c.Title, AddPrefix+string(eventSer))
 		}
 		inlineKeyboardRows = append(inlineKeyboardRows, inlineKeyboardRow)
 		err = s.client.SendCallbackQuery(inlineKeyboardRows, msg,
@@ -437,7 +437,7 @@ func (s *Service) checkLimitPrice(ctx context.Context, category model.Category) 
 	return
 }
 
-func eventSerialize(event *Event) string {
+func EventSerialize(event *Event) string {
 	return strings.Join([]string{
 		strconv.FormatFloat(event.Price, 'f', 2, 64),
 		strconv.Itoa(event.CategoryId),
