@@ -47,29 +47,52 @@ func NewCategoryLimit(db *sqlx.DB, categorySearch category.Search) *CategoryLimi
 }
 
 func (cl *CategoryLimit) Set(ctx context.Context, stateId, categoryId int, limit decimal.Decimal) (s *CategoryLimit, err error) {
+	tx, err := cl.db.Begin()
+	if err != nil {
+		return nil, errors.Wrap(err, "limit tx begin")
+	}
+
 	categoryLimitState, err := cl.GetByStateCategory(ctx, stateId, categoryId)
 	if err != nil && !errors.Is(err, limitNotFoundError) {
 		return nil, errors.Wrap(err, "limit set")
 	} else if err == nil {
 		// update limit
-		_, err = cl.db.ExecContext(ctx, queryUpdate, limit.Original(), categoryLimitState.Id)
+		_, err = tx.ExecContext(ctx, queryUpdate, limit.Original(), categoryLimitState.Id)
 		if err != nil {
+			errRoll := tx.Rollback()
+			if errRoll != nil {
+				return nil, errors.Wrap(errRoll, "limit rollback")
+			}
 			return nil, errors.Wrap(err, "limit update")
 		}
+
 		categoryLimitState.Limit = limit
 		return categoryLimitState, nil
 	}
 
 	cat, err := cl.categorySearch.CategoryGetById(ctx, categoryId)
 	if err != nil {
-		return nil, errors.Wrap(err, "limit set")
+		errRoll := tx.Rollback()
+		if errRoll != nil {
+			return nil, errors.Wrap(errRoll, "limit rollback")
+		}
+		return nil, errors.Wrap(err, "limit get")
 	}
 
 	var categoryLimitId int
-	row := cl.db.QueryRowContext(ctx, queryInsert, stateId, cat.Id, limit.Original())
+	row := tx.QueryRowContext(ctx, queryInsert, stateId, cat.Id, limit.Original())
 	err = row.Scan(&categoryLimitId)
 	if err != nil {
-		return nil, errors.Wrap(err, "insert limit")
+		errRoll := tx.Rollback()
+		if errRoll != nil {
+			return nil, errors.Wrap(errRoll, "limit rollback")
+		}
+		return nil, errors.Wrap(err, "limit insert")
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return nil, errors.Wrap(err, "limit tx commit")
 	}
 
 	return &CategoryLimit{
