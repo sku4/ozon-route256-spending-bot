@@ -105,11 +105,12 @@ func (rs *Rates) UpdateRates(ctx context.Context) (err error) {
 	}
 
 	rs.mutex.Lock()
-	rateByn := float64(0)
+	rateByn := decimal.Decimal(0)
 	currencyDef := rs.reposCurr.GetDefault(ctx)
 	for _, nbrbRate := range nbrbRates {
 		if nbrbRate.CurAbbreviation == currencyDef.Abbr {
-			rateByn = nbrbRate.CurOfficialRate / float64(nbrbRate.CurScale)
+			rateByn = decimal.ToDecimal(nbrbRate.CurOfficialRate).Divide(
+				decimal.ToDecimal(nbrbRate.CurScale))
 			break
 		}
 	}
@@ -137,10 +138,11 @@ func (rs *Rates) UpdateRates(ctx context.Context) (err error) {
 		if err != nil {
 			continue
 		}
-		rate := nbrbRate.CurOfficialRate / float64(nbrbRate.CurScale)
-		r := rate / rateByn
+		rate := decimal.ToDecimal(nbrbRate.CurOfficialRate).Divide(
+			decimal.ToDecimal(nbrbRate.CurScale))
+		r := rate.Divide(rateByn)
 
-		_, err = tx.Exec(queryInsert, curr.Id, decimal.ToDecimal(r).Original())
+		_, err = tx.Exec(queryInsert, curr.Id, r.Original())
 		if err != nil {
 			errRoll := tx.Rollback()
 			if errRoll != nil {
@@ -153,7 +155,7 @@ func (rs *Rates) UpdateRates(ctx context.Context) (err error) {
 
 		rs.m[curr] = &rates.Rate{
 			Currency: curr,
-			Rate:     decimal.ToDecimal(r),
+			Rate:     r,
 		}
 	}
 
