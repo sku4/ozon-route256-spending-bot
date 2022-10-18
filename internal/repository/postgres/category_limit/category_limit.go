@@ -2,6 +2,7 @@ package category_limit
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
@@ -24,8 +25,6 @@ var (
 	queryUpdate        = fmt.Sprintf(`UPDATE %s SET category_limit = $1 WHERE id = $2`, categoryLimitTable)
 	queryInsert        = fmt.Sprintf(`INSERT INTO %s (state_id, category_id, category_limit) 
 												values ($1, $2, $3) RETURNING id`, categoryLimitTable)
-	querySelectById = fmt.Sprintf(`SELECT id, state_id, category_id, category_limit FROM %s WHERE id=$1`,
-		categoryLimitTable)
 	querySelectByStateCategory = fmt.Sprintf(`SELECT id, state_id, category_id, category_limit 
 									FROM %s WHERE state_id = $1 AND category_id = $2`, categoryLimitTable)
 	querySelectByState = fmt.Sprintf(`SELECT id, state_id, category_id, category_limit 
@@ -52,8 +51,12 @@ func (cl *CategoryLimit) Set(ctx context.Context, stateId, categoryId int, limit
 		return nil, errors.Wrap(err, "limit tx begin")
 	}
 
-	categoryLimitState, err := cl.GetByStateCategory(ctx, stateId, categoryId)
+	categoryLimitState, err := cl.TxGetByStateCategory(ctx, tx, stateId, categoryId)
 	if err != nil && !errors.Is(err, limitNotFoundError) {
+		errRoll := tx.Rollback()
+		if errRoll != nil {
+			return nil, errors.Wrap(errRoll, "limit rollback")
+		}
 		return nil, errors.Wrap(err, "limit set")
 	} else if err == nil {
 		// update limit
@@ -66,11 +69,16 @@ func (cl *CategoryLimit) Set(ctx context.Context, stateId, categoryId int, limit
 			return nil, errors.Wrap(err, "limit update")
 		}
 
+		err = tx.Commit()
+		if err != nil {
+			return nil, errors.Wrap(err, "limit tx commit")
+		}
+
 		categoryLimitState.Limit = limit
 		return categoryLimitState, nil
 	}
 
-	cat, err := cl.categorySearch.CategoryGetById(ctx, categoryId)
+	cat, err := cl.categorySearch.TxCategoryGetById(ctx, tx, categoryId)
 	if err != nil {
 		errRoll := tx.Rollback()
 		if errRoll != nil {
@@ -104,47 +112,26 @@ func (cl *CategoryLimit) Set(ctx context.Context, stateId, categoryId int, limit
 	}, nil
 }
 
-func (cl *CategoryLimit) GetById(ctx context.Context, id int) (c *CategoryLimit, err error) {
-	var categoryLimitDB model.CategoryLimitDB
-	if err = cl.db.GetContext(ctx, &categoryLimitDB, querySelectById, id); err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("limit '%d' not found", id))
-	}
-
-	cat, err := cl.categorySearch.CategoryGetById(ctx, categoryLimitDB.CategoryId)
+func (cl *CategoryLimit) TxGetByStateCategory(ctx context.Context, tx *sql.Tx, stateId, categoryId int) (c *CategoryLimit, err error) {
+	var clDB model.CategoryLimitDB
+	row := tx.QueryRowContext(ctx, querySelectByStateCategory, stateId, categoryId)
+	err = row.Scan(&clDB.Id, &clDB.StateId, &clDB.CategoryId,
+		&clDB.Limit)
 	if err != nil {
-		return nil, errors.Wrap(err, "get by id")
-	}
-
-	c = &CategoryLimit{
-		CategoryLimit: model.CategoryLimit{
-			Id:       categoryLimitDB.Id,
-			Category: cat,
-		},
-		Limit:          decimal.Decimal(categoryLimitDB.Limit),
-		db:             cl.db,
-		categorySearch: cl.categorySearch,
-	}
-
-	return
-}
-
-func (cl *CategoryLimit) GetByStateCategory(ctx context.Context, stateId, categoryId int) (c *CategoryLimit, err error) {
-	var categoryLimitDB model.CategoryLimitDB
-	if err = cl.db.GetContext(ctx, &categoryLimitDB, querySelectByStateCategory, stateId, categoryId); err != nil {
 		return nil, errors.Wrap(limitNotFoundError, "limit not found")
 	}
 
-	cat, err := cl.categorySearch.CategoryGetById(ctx, categoryLimitDB.CategoryId)
+	cat, err := cl.categorySearch.TxCategoryGetById(ctx, tx, clDB.CategoryId)
 	if err != nil {
 		return nil, errors.Wrap(err, "get by state category")
 	}
 
 	c = &CategoryLimit{
 		CategoryLimit: model.CategoryLimit{
-			Id:       categoryLimitDB.Id,
+			Id:       clDB.Id,
 			Category: cat,
 		},
-		Limit:          decimal.Decimal(categoryLimitDB.Limit),
+		Limit:          decimal.Decimal(clDB.Limit),
 		db:             cl.db,
 		categorySearch: cl.categorySearch,
 	}

@@ -2,6 +2,7 @@ package category
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
@@ -10,6 +11,7 @@ import (
 
 type Search interface {
 	CategoryGetById(context.Context, int) (*model.Category, error)
+	TxCategoryGetById(context.Context, *sql.Tx, int) (*model.Category, error)
 	CategoryGetByTitle(context.Context, string) (*model.Category, error)
 }
 
@@ -71,6 +73,17 @@ func (s *Category) DeleteCategory(ctx context.Context, id int) (err error) {
 func (s *Category) CategoryGetById(ctx context.Context, id int) (cat *model.Category, err error) {
 	var c model.Category
 	if err = s.db.GetContext(ctx, &c, queryGetById, id); err != nil {
+		return nil, NotFoundError
+	}
+
+	return &c, nil
+}
+
+func (s *Category) TxCategoryGetById(ctx context.Context, tx *sql.Tx, id int) (cat *model.Category, err error) {
+	var c model.Category
+	row := tx.QueryRowContext(ctx, queryGetById, id)
+	err = row.Scan(&c.Id, &c.Title)
+	if err != nil {
 		return nil, NotFoundError
 	}
 
