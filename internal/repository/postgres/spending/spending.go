@@ -17,6 +17,14 @@ const (
 	eventTable = "event"
 )
 
+var (
+	queryInsert = fmt.Sprintf("INSERT INTO %s (category_id, event_at, price) values ($1, $2, $3) RETURNING id",
+		eventTable)
+	queryDelete = fmt.Sprintf(`DELETE FROM %s WHERE id = $1`, eventTable)
+	queryReport = fmt.Sprintf(`SELECT id, category_id, event_at, price FROM %s WHERE event_at BETWEEN $1 AND $2`,
+		eventTable)
+)
+
 type Spending struct {
 	db             *sqlx.DB
 	categorySearch category.Search
@@ -40,9 +48,7 @@ func (s *Spending) AddEvent(ctx context.Context, categoryId int, date time.Time,
 		return 0, errors.Wrap(err, "category not found")
 	}
 
-	createCategoryQuery := fmt.Sprintf("INSERT INTO %s (category_id, event_at, price) values ($1, $2, $3) RETURNING id",
-		eventTable)
-	row := s.db.QueryRowContext(ctx, createCategoryQuery, cat.Id, date.Format("2006-01-02"), price.Original())
+	row := s.db.QueryRowContext(ctx, queryInsert, cat.Id, date.Format("2006-01-02"), price.Original())
 	err = row.Scan(&eventId)
 	if err != nil {
 		return 0, errors.Wrap(err, "insert event")
@@ -52,8 +58,7 @@ func (s *Spending) AddEvent(ctx context.Context, categoryId int, date time.Time,
 }
 
 func (s *Spending) DeleteEvent(ctx context.Context, id int) (err error) {
-	query := fmt.Sprintf(`DELETE FROM %s WHERE id = $1`, eventTable)
-	_, err = s.db.ExecContext(ctx, query, id)
+	_, err = s.db.ExecContext(ctx, queryDelete, id)
 	if err != nil {
 		return errors.Wrap(err, "delete event")
 	}
@@ -65,9 +70,7 @@ func (s Spending) Report(ctx context.Context, f1, f2 time.Time, rates rates.Clie
 	stat := make(map[int]decimal.Decimal)
 
 	var events []model.EventDB
-	query := fmt.Sprintf(`SELECT id, category_id, event_at, price FROM %s WHERE event_at BETWEEN '%s' AND '%s'`,
-		eventTable, f1.Format("2006-01-02"), f2.Format("2006-01-02"))
-	if err = s.db.SelectContext(ctx, &events, query); err != nil {
+	if err = s.db.SelectContext(ctx, &events, queryReport, f1.Format("2006-01-02"), f2.Format("2006-01-02")); err != nil {
 		return nil, errors.Wrap(err, "select report")
 	}
 

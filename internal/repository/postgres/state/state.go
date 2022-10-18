@@ -16,6 +16,13 @@ const (
 	stateTable = "state"
 )
 
+var (
+	queryUpdate  = fmt.Sprintf(`UPDATE %s SET currency_id=$1 WHERE id=$2`, stateTable)
+	querySelect  = fmt.Sprintf(`SELECT id, currency_id FROM %s WHERE id=$1`, stateTable)
+	queryGetById = fmt.Sprintf(`SELECT id, currency_id FROM %s WHERE id=$1`, stateTable)
+	queryInsert  = fmt.Sprintf("INSERT INTO %s (currency_id) values ($1) RETURNING id", stateTable)
+)
+
 type Client interface {
 	GetById(context.Context, int) (*State, error)
 	AddState(context.Context) (*State, error)
@@ -34,8 +41,7 @@ func (s *State) SetCurrency(ctx context.Context, c *model.Currency) (err error) 
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	query := fmt.Sprintf(`UPDATE %s SET currency_id = %d WHERE id = %d`, stateTable, c.Id, s.Id)
-	_, err = s.db.ExecContext(ctx, query)
+	_, err = s.db.ExecContext(ctx, queryUpdate, c.Id, s.Id)
 	if err != nil {
 		return errors.Wrap(err, "update currency")
 	}
@@ -50,8 +56,7 @@ func (s *State) GetCurrency(ctx context.Context) (c *model.Currency, err error) 
 
 	if s.Currency == nil {
 		var state model.StateDB
-		query := fmt.Sprintf(`SELECT id, currency_id FROM %s WHERE id = %d`, stateTable, s.Id)
-		if err = s.db.GetContext(ctx, &state, query); err != nil {
+		if err = s.db.GetContext(ctx, &state, querySelect, s.Id); err != nil {
 			return nil, errors.Wrap(err, "state get currency")
 		}
 		s.Currency, err = s.reposCurr.GetById(ctx, state.CurrencyId)
@@ -102,8 +107,7 @@ func NewStates(db *sqlx.DB, reposCurr currency.Client, reposCatLimitSet category
 
 func (s *States) GetById(ctx context.Context, id int) (st *State, err error) {
 	var state model.StateDB
-	query := fmt.Sprintf(`SELECT id, currency_id FROM %s WHERE id = %d`, stateTable, id)
-	if err = s.db.GetContext(ctx, &state, query); err != nil {
+	if err = s.db.GetContext(ctx, &state, queryGetById, id); err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("state '%d' not found", id))
 	}
 
@@ -136,8 +140,7 @@ func (s *States) AddState(ctx context.Context) (st *State, err error) {
 	c := s.reposCurr.GetDefault(ctx)
 
 	var stateId int
-	createStateQuery := fmt.Sprintf("INSERT INTO %s (currency_id) values ($1) RETURNING id", stateTable)
-	row := s.db.QueryRowContext(ctx, createStateQuery, c.Id)
+	row := s.db.QueryRowContext(ctx, queryInsert, c.Id)
 	err = row.Scan(&stateId)
 	if err != nil {
 		return nil, errors.Wrap(err, "insert state")

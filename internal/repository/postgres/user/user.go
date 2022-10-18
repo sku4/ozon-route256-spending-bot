@@ -16,7 +16,10 @@ const (
 )
 
 var (
-	mutex = &sync.RWMutex{}
+	mutex                = &sync.RWMutex{}
+	queryGeById          = fmt.Sprintf(`SELECT id, state_id FROM "%s" WHERE id=$1`, userTable)
+	queryInsert          = fmt.Sprintf(`INSERT INTO "%s" (telegram_id, state_id) values ($1, $2) RETURNING id`, userTable)
+	queryGetByTelegramId = fmt.Sprintf(`SELECT id, state_id, telegram_id FROM "%s" WHERE telegram_id=$1`, userTable)
 )
 
 type Users struct {
@@ -39,8 +42,7 @@ func (u *User) GetState(ctx context.Context) (s *state.State, err error) {
 
 	if u.State == nil {
 		var user model.UserDB
-		query := fmt.Sprintf(`SELECT id, state_id FROM "%s" WHERE id = %d`, userTable, u.TgId)
-		if err = u.db.GetContext(ctx, &user, query); err != nil {
+		if err = u.db.GetContext(ctx, &user, queryGeById, u.TgId); err != nil {
 			return nil, errors.Wrap(err, "user get state")
 		}
 		u.State, err = u.reposState.GetById(ctx, user.StateId)
@@ -76,8 +78,7 @@ func (us *Users) AddUser(ctx context.Context, telegramId int) (u *User, err erro
 	}
 
 	var userId int
-	createUserQuery := fmt.Sprintf(`INSERT INTO "%s" (telegram_id, state_id) values ($1, $2) RETURNING id`, userTable)
-	row := us.db.QueryRowContext(ctx, createUserQuery, telegramId, st.Id)
+	row := us.db.QueryRowContext(ctx, queryInsert, telegramId, st.Id)
 	err = row.Scan(&userId)
 	if err != nil {
 		return nil, errors.Wrap(err, "insert user")
@@ -102,8 +103,7 @@ func (us *Users) GetById(ctx context.Context, id int) (u *User, err error) {
 	defer mutex.RUnlock()
 
 	var user model.UserDB
-	query := fmt.Sprintf(`SELECT id, state_id, telegram_id FROM "%s" WHERE telegram_id = %d`, userTable, id)
-	if err = us.db.GetContext(ctx, &user, query); err != nil {
+	if err = us.db.GetContext(ctx, &user, queryGetByTelegramId, id); err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("user '%d' not found", id))
 	}
 

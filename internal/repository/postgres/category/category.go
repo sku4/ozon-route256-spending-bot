@@ -18,7 +18,12 @@ const (
 )
 
 var (
-	NotFoundError = errors.New("category not found")
+	NotFoundError   = errors.New("category not found")
+	querySelectAll  = fmt.Sprintf(`SELECT id, title FROM %s`, categoryTable)
+	queryInsert     = fmt.Sprintf("INSERT INTO %s (title) values ($1) RETURNING id", categoryTable)
+	queryDelete     = fmt.Sprintf(`DELETE FROM %s WHERE id = $1`, categoryTable)
+	queryGetById    = fmt.Sprintf(`SELECT id, title FROM %s WHERE id=$1`, categoryTable)
+	queryGetByTitle = fmt.Sprintf(`SELECT id, title FROM %s WHERE title=$1`, categoryTable)
 )
 
 type Category struct {
@@ -32,8 +37,7 @@ func NewCategory(db *sqlx.DB) *Category {
 }
 
 func (s Category) Categories(ctx context.Context) (cs []model.Category, err error) {
-	query := fmt.Sprintf(`SELECT id, title FROM %s`, categoryTable)
-	if err = s.db.SelectContext(ctx, &cs, query); err != nil {
+	if err = s.db.SelectContext(ctx, &cs, querySelectAll); err != nil {
 		return nil, errors.Wrap(err, "all categories")
 	}
 
@@ -46,8 +50,7 @@ func (s *Category) AddCategory(ctx context.Context, title string) (categoryId in
 		return 0, errors.Wrap(err, "add category")
 	}
 
-	createCategoryQuery := fmt.Sprintf("INSERT INTO %s (title) values ($1) RETURNING id", categoryTable)
-	row := s.db.QueryRowContext(ctx, createCategoryQuery, title)
+	row := s.db.QueryRowContext(ctx, queryInsert, title)
 	err = row.Scan(&categoryId)
 	if err != nil {
 		return 0, errors.Wrap(err, "insert category")
@@ -57,8 +60,7 @@ func (s *Category) AddCategory(ctx context.Context, title string) (categoryId in
 }
 
 func (s *Category) DeleteCategory(ctx context.Context, id int) (err error) {
-	query := fmt.Sprintf(`DELETE FROM %s WHERE id = $1`, categoryTable)
-	_, err = s.db.ExecContext(ctx, query, id)
+	_, err = s.db.ExecContext(ctx, queryDelete, id)
 	if err != nil {
 		return errors.Wrap(err, "delete category")
 	}
@@ -68,8 +70,7 @@ func (s *Category) DeleteCategory(ctx context.Context, id int) (err error) {
 
 func (s *Category) CategoryGetById(ctx context.Context, id int) (cat *model.Category, err error) {
 	var c model.Category
-	query := fmt.Sprintf(`SELECT id, title FROM %s WHERE id = %d`, categoryTable, id)
-	if err = s.db.GetContext(ctx, &c, query); err != nil {
+	if err = s.db.GetContext(ctx, &c, queryGetById, id); err != nil {
 		return nil, NotFoundError
 	}
 
@@ -78,8 +79,7 @@ func (s *Category) CategoryGetById(ctx context.Context, id int) (cat *model.Cate
 
 func (s *Category) CategoryGetByTitle(ctx context.Context, title string) (cat *model.Category, err error) {
 	var c model.Category
-	query := fmt.Sprintf(`SELECT id, title FROM %s WHERE title = '%s'`, categoryTable, title)
-	if err = s.db.GetContext(ctx, &c, query); err != nil {
+	if err = s.db.GetContext(ctx, &c, queryGetByTitle, title); err != nil {
 		return nil, NotFoundError
 	}
 

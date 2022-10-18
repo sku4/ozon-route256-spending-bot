@@ -21,6 +21,15 @@ const (
 
 var (
 	limitNotFoundError = errors.New("limit not found")
+	queryUpdate        = fmt.Sprintf(`UPDATE %s SET category_limit = $1 WHERE id = $2`, categoryLimitTable)
+	queryInsert        = fmt.Sprintf(`INSERT INTO %s (state_id, category_id, category_limit) 
+												values ($1, $2, $3) RETURNING id`, categoryLimitTable)
+	querySelectById = fmt.Sprintf(`SELECT id, state_id, category_id, category_limit FROM %s WHERE id=$1`,
+		categoryLimitTable)
+	querySelectByStateCategory = fmt.Sprintf(`SELECT id, state_id, category_id, category_limit 
+									FROM %s WHERE state_id = $1 AND category_id = $2`, categoryLimitTable)
+	querySelectByState = fmt.Sprintf(`SELECT id, state_id, category_id, category_limit 
+									FROM %s WHERE state_id = $1`, categoryLimitTable)
 )
 
 type CategoryLimit struct {
@@ -43,8 +52,7 @@ func (cl *CategoryLimit) Set(ctx context.Context, stateId, categoryId int, limit
 		return nil, errors.Wrap(err, "limit set")
 	} else if err == nil {
 		// update limit
-		query := fmt.Sprintf(`UPDATE %s SET category_limit = $1 WHERE id = $2`, categoryLimitTable)
-		_, err = cl.db.ExecContext(ctx, query, limit.Original(), categoryLimitState.Id)
+		_, err = cl.db.ExecContext(ctx, queryUpdate, limit.Original(), categoryLimitState.Id)
 		if err != nil {
 			return nil, errors.Wrap(err, "limit update")
 		}
@@ -58,9 +66,7 @@ func (cl *CategoryLimit) Set(ctx context.Context, stateId, categoryId int, limit
 	}
 
 	var categoryLimitId int
-	createLimitQuery := fmt.Sprintf(`INSERT INTO %s (state_id, category_id, category_limit) 
-												values ($1, $2, $3) RETURNING id`, categoryLimitTable)
-	row := cl.db.QueryRowContext(ctx, createLimitQuery, stateId, cat.Id, limit.Original())
+	row := cl.db.QueryRowContext(ctx, queryInsert, stateId, cat.Id, limit.Original())
 	err = row.Scan(&categoryLimitId)
 	if err != nil {
 		return nil, errors.Wrap(err, "insert limit")
@@ -77,9 +83,7 @@ func (cl *CategoryLimit) Set(ctx context.Context, stateId, categoryId int, limit
 
 func (cl *CategoryLimit) GetById(ctx context.Context, id int) (c *CategoryLimit, err error) {
 	var categoryLimitDB model.CategoryLimitDB
-	query := fmt.Sprintf(`SELECT id, state_id, category_id, category_limit 
-									FROM %s WHERE id = %d`, categoryLimitTable, id)
-	if err = cl.db.GetContext(ctx, &categoryLimitDB, query); err != nil {
+	if err = cl.db.GetContext(ctx, &categoryLimitDB, querySelectById, id); err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("limit '%d' not found", id))
 	}
 
@@ -103,9 +107,7 @@ func (cl *CategoryLimit) GetById(ctx context.Context, id int) (c *CategoryLimit,
 
 func (cl *CategoryLimit) GetByStateCategory(ctx context.Context, stateId, categoryId int) (c *CategoryLimit, err error) {
 	var categoryLimitDB model.CategoryLimitDB
-	query := fmt.Sprintf(`SELECT id, state_id, category_id, category_limit 
-									FROM %s WHERE state_id = $1 AND category_id = $2`, categoryLimitTable)
-	if err = cl.db.GetContext(ctx, &categoryLimitDB, query, stateId, categoryId); err != nil {
+	if err = cl.db.GetContext(ctx, &categoryLimitDB, querySelectByStateCategory, stateId, categoryId); err != nil {
 		return nil, errors.Wrap(limitNotFoundError, "limit not found")
 	}
 
@@ -129,9 +131,7 @@ func (cl *CategoryLimit) GetByStateCategory(ctx context.Context, stateId, catego
 
 func (cl *CategoryLimit) GetByState(ctx context.Context, stateId int) (cls []*CategoryLimit, err error) {
 	var categoryLimitDB []*model.CategoryLimitDB
-	query := fmt.Sprintf(`SELECT id, state_id, category_id, category_limit 
-									FROM %s WHERE state_id = $1`, categoryLimitTable)
-	if err = cl.db.SelectContext(ctx, &categoryLimitDB, query, stateId); err != nil {
+	if err = cl.db.SelectContext(ctx, &categoryLimitDB, querySelectByState, stateId); err != nil {
 		return nil, errors.Wrap(err, "get by state")
 	}
 

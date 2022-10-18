@@ -22,6 +22,7 @@ const (
 
 var (
 	defaultCurrencyAbbr = "RUB"
+	querySelectAll      = fmt.Sprintf(`SELECT id, abbreviation FROM %s`, currencyTable)
 )
 
 type Currencies struct {
@@ -38,8 +39,7 @@ func NewCurrencies(db *sqlx.DB) (*Currencies, error) {
 		mutex:      &sync.RWMutex{},
 	}
 
-	query := fmt.Sprintf(`SELECT id, abbreviation FROM %s`, currencyTable)
-	if err := cs.db.Select(&cs.currencies, query); err != nil {
+	if err := cs.db.Select(&cs.currencies, querySelectAll); err != nil {
 		return nil, errors.Wrap(err, "select all currencies")
 	}
 

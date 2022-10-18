@@ -24,6 +24,11 @@ const (
 	rateTable    = "rate"
 )
 
+var (
+	queryTruncate = fmt.Sprintf("TRUNCATE TABLE %s", rateTable)
+	queryInsert   = fmt.Sprintf("INSERT INTO %s (currency_id, rate) values ($1, $2)", rateTable)
+)
+
 type Rates struct {
 	m          map[*model.Currency]*rates.Rate
 	lastUpdate time.Time
@@ -115,8 +120,7 @@ func (rs *Rates) UpdateRates(ctx context.Context) (err error) {
 		return errors.Wrap(err, "nbrb tx begin")
 	}
 
-	truncateRates := fmt.Sprintf("TRUNCATE TABLE %s", rateTable)
-	_, err = tx.Exec(truncateRates)
+	_, err = tx.Exec(queryTruncate)
 	if err != nil {
 		errRoll := tx.Rollback()
 		if errRoll != nil {
@@ -136,8 +140,7 @@ func (rs *Rates) UpdateRates(ctx context.Context) (err error) {
 		rate := nbrbRate.CurOfficialRate / float64(nbrbRate.CurScale)
 		r := rate / rateByn
 
-		insertRateQuery := fmt.Sprintf("INSERT INTO %s (currency_id, rate) values ($1, $2)", rateTable)
-		_, err = tx.Exec(insertRateQuery, curr.Id, decimal.ToDecimal(r).Original())
+		_, err = tx.Exec(queryInsert, curr.Id, decimal.ToDecimal(r).Original())
 		if err != nil {
 			errRoll := tx.Rollback()
 			if errRoll != nil {
