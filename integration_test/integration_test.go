@@ -11,11 +11,10 @@ import (
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	"github.com/stretchr/testify/suite"
+	main "gitlab.ozon.dev/skubach/workshop-1-bot/cmd/bot"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/handler"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/rates"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/rates/nbrb"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/service"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/service/spending"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/model"
@@ -58,7 +57,7 @@ func (s *SpendingSuite) SetupSuite() {
 
 	repos, err := repository.NewRepository(s.db)
 	s.Require().NoError(err)
-	ratesClient := s.initRates(repos)
+	ratesClient := main.InitRates(s.ctx, s.db, repos)
 	services := service.NewService(repos, tgClient, ratesClient)
 	s.hr = handler.NewHandler(s.ctx, services)
 }
@@ -129,20 +128,6 @@ func (s *SpendingSuite) initTelegramBot() (tgClient *client.Client) {
 	s.Require().NoError(err)
 
 	return
-}
-
-func (s *SpendingSuite) initRates(repos *repository.Repository) rates.Client {
-	ratesClient := nbrb.NewRates(s.db, repos.CurrencyClient)
-	run := ratesClient.UpdateRatesSync(s.ctx)
-
-	if run {
-		go func() {
-			// read channel error
-			<-ratesClient.SyncChan(s.ctx)
-		}()
-	}
-
-	return ratesClient
 }
 
 func (s *SpendingSuite) tgBotMessageCommand(cmd string, args ...string) (update tgbotapi.Update) {
