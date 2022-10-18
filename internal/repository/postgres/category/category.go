@@ -11,7 +11,7 @@ import (
 
 type Search interface {
 	CategoryGetById(context.Context, int) (*model.Category, error)
-	TxCategoryGetById(context.Context, *sql.Tx, int) (*model.Category, error)
+	CategoryGetByIdTx(context.Context, *sql.Tx, int) (*model.Category, error)
 	CategoryGetByTitle(context.Context, string) (*model.Category, error)
 }
 
@@ -79,7 +79,7 @@ func (s *Category) CategoryGetById(ctx context.Context, id int) (cat *model.Cate
 	return &c, nil
 }
 
-func (s *Category) TxCategoryGetById(ctx context.Context, tx *sql.Tx, id int) (cat *model.Category, err error) {
+func (s *Category) CategoryGetByIdTx(ctx context.Context, tx *sql.Tx, id int) (cat *model.Category, err error) {
 	var c model.Category
 	row := tx.QueryRowContext(ctx, queryGetById, id)
 	err = row.Scan(&c.Id, &c.Title)

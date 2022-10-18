@@ -52,7 +52,7 @@ func (cl *CategoryLimit) Set(ctx context.Context, stateId, categoryId int, limit
 		return nil, errors.Wrap(err, "limit tx begin")
 	}
 
-	categoryLimitState, err := cl.TxGetByStateCategory(ctx, tx, stateId, categoryId)
+	categoryLimitState, err := cl.GetByStateCategoryTx(ctx, tx, stateId, categoryId)
 	if err != nil && !errors.Is(err, limitNotFoundError) {
 		errRoll := tx.Rollback()
 		if errRoll != nil {
@@ -79,7 +79,7 @@ func (cl *CategoryLimit) Set(ctx context.Context, stateId, categoryId int, limit
 		return categoryLimitState, nil
 	}
 
-	cat, err := cl.categorySearch.TxCategoryGetById(ctx, tx, categoryId)
+	cat, err := cl.categorySearch.CategoryGetByIdTx(ctx, tx, categoryId)
 	if err != nil {
 		errRoll := tx.Rollback()
 		if errRoll != nil {
@@ -113,7 +113,7 @@ func (cl *CategoryLimit) Set(ctx context.Context, stateId, categoryId int, limit
 	}, nil
 }
 
-func (cl *CategoryLimit) TxGetByStateCategory(ctx context.Context, tx *sql.Tx, stateId, categoryId int) (c *CategoryLimit, err error) {
+func (cl *CategoryLimit) GetByStateCategoryTx(ctx context.Context, tx *sql.Tx, stateId, categoryId int) (c *CategoryLimit, err error) {
 	var clDB model.CategoryLimitDB
 	row := tx.QueryRowContext(ctx, querySelectByStateCategory, stateId, categoryId)
 	err = row.Scan(&clDB.Id, &clDB.StateId, &clDB.CategoryId,
@@ -122,7 +122,7 @@ func (cl *CategoryLimit) TxGetByStateCategory(ctx context.Context, tx *sql.Tx, s
 		return nil, errors.Wrap(limitNotFoundError, "limit not found")
 	}
 
-	cat, err := cl.categorySearch.TxCategoryGetById(ctx, tx, clDB.CategoryId)
+	cat, err := cl.categorySearch.CategoryGetByIdTx(ctx, tx, clDB.CategoryId)
 	if err != nil {
 		return nil, errors.Wrap(err, "get by state category")
 	}

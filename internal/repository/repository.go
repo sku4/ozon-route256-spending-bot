@@ -33,7 +33,7 @@ type Categories interface {
 
 type Users interface {
 	AddUser(context.Context, int) (*user.User, error)
-	GetById(context.Context, int) (*user.User, error)
+	GetByTgId(context.Context, int) (*user.User, error)
 }
 
 type Repository struct {

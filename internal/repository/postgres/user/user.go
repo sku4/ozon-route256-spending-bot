@@ -65,23 +65,38 @@ func NewUsers(db *sqlx.DB, reposCurr currency.Client, reposState state.Client) *
 }
 
 func (us *Users) AddUser(ctx context.Context, telegramId int) (u *User, err error) {
-	if u, err = us.GetById(ctx, telegramId); err == nil {
+	if u, err = us.GetByTgId(ctx, telegramId); err == nil {
 		return u, nil
 	}
 
-	mutex.Lock()
-	defer mutex.Unlock()
-
-	st, err := us.reposState.AddState(ctx)
+	tx, err := us.db.Begin()
 	if err != nil {
+		return nil, errors.Wrap(err, "add user tx begin")
+	}
+
+	st, err := us.reposState.AddStateTx(ctx, tx)
+	if err != nil {
+		errRoll := tx.Rollback()
+		if errRoll != nil {
+			return nil, errors.Wrap(errRoll, "add user rollback")
+		}
 		return nil, errors.Wrap(err, "add user")
 	}
 
 	var userId int
-	row := us.db.QueryRowContext(ctx, queryInsert, telegramId, st.Id)
+	row := tx.QueryRowContext(ctx, queryInsert, telegramId, st.Id)
 	err = row.Scan(&userId)
 	if err != nil {
+		errRoll := tx.Rollback()
+		if errRoll != nil {
+			return nil, errors.Wrap(errRoll, "insert user rollback")
+		}
 		return nil, errors.Wrap(err, "insert user")
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return nil, errors.Wrap(err, "add user tx commit")
 	}
 
 	u = &User{
@@ -98,18 +113,35 @@ func (us *Users) AddUser(ctx context.Context, telegramId int) (u *User, err erro
 	return u, nil
 }
 
-func (us *Users) GetById(ctx context.Context, id int) (u *User, err error) {
-	mutex.RLock()
-	defer mutex.RUnlock()
-
-	var user model.UserDB
-	if err = us.db.GetContext(ctx, &user, queryGetByTelegramId, id); err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("user '%d' not found", id))
+func (us *Users) GetByTgId(ctx context.Context, tgId int) (u *User, err error) {
+	tx, err := us.db.Begin()
+	if err != nil {
+		return nil, errors.Wrap(err, "user by tg_id tx begin")
 	}
 
-	st, err := us.reposState.GetById(ctx, user.StateId)
+	var user model.UserDB
+	row := tx.QueryRowContext(ctx, queryGetByTelegramId, tgId)
+	err = row.Scan(&user.Id, &user.StateId, &user.TgId)
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("state '%d' not found", id))
+		errRoll := tx.Rollback()
+		if errRoll != nil {
+			return nil, errors.Wrap(errRoll, "user by tg_id rollback")
+		}
+		return nil, errors.Wrap(err, fmt.Sprintf("user '%d' not found", tgId))
+	}
+
+	st, err := us.reposState.GetByIdTx(ctx, tx, user.StateId)
+	if err != nil {
+		errRoll := tx.Rollback()
+		if errRoll != nil {
+			return nil, errors.Wrap(errRoll, "user by tg_id rollback")
+		}
+		return nil, errors.Wrap(err, fmt.Sprintf("state '%d' not found", tgId))
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return nil, errors.Wrap(err, "user by tg_id tx commit")
 	}
 
 	u = &User{

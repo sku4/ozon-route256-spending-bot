@@ -2,6 +2,7 @@ package state
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
@@ -38,7 +39,9 @@ var (
 
 type Client interface {
 	GetById(context.Context, int) (*State, error)
+	GetByIdTx(context.Context, *sql.Tx, int) (*State, error)
 	AddState(context.Context) (*State, error)
+	AddStateTx(context.Context, *sql.Tx) (*State, error)
 }
 
 type State struct {
@@ -168,6 +171,65 @@ func (s *States) GetById(ctx context.Context, id int) (st *State, err error) {
 	return
 }
 
+func (s *States) GetByIdTx(ctx context.Context, tx *sql.Tx, id int) (st *State, err error) {
+	var state model.StateWithLimits
+	row := tx.QueryRowContext(ctx, queryGetWithCurr, id)
+	err = row.Scan(&state.Id, &state.CurrencyId, &state.CurrencyAbbr)
+	if err != nil {
+		return nil, errors.Wrap(err, fmt.Sprintf("state '%d' not found", id))
+	}
+
+	var curr = model.Currency{
+		Id:   state.CurrencyId,
+		Abbr: state.CurrencyAbbr,
+	}
+
+	var stateLimits []model.StateWithLimits
+	rows, err := tx.QueryContext(ctx, queryGetWithLimits, id)
+	if err != nil {
+		return nil, errors.Wrap(err, "with limits select")
+	}
+
+	for rows.Next() {
+		var stateLimit model.StateWithLimits
+		err = rows.Scan(&stateLimit.CategoryLimitId, &stateLimit.CategoryId,
+			&stateLimit.CategoryTitle, &stateLimit.CategoryLimit)
+		if err != nil {
+			break
+		}
+		stateLimits = append(stateLimits, stateLimit)
+	}
+
+	var limits []*category_limit.CategoryLimit
+	for _, limit := range stateLimits {
+		c := &model.Category{
+			Id:    limit.CategoryId,
+			Title: limit.CategoryTitle,
+		}
+		limitDB := &model.CategoryLimitDB{
+			Id:         limit.CategoryLimitId,
+			Limit:      limit.CategoryLimit,
+			CategoryId: limit.CategoryId,
+			StateId:    id,
+		}
+		limits = append(limits, s.reposCatLimitSet.Create(ctx, c, limitDB))
+	}
+
+	st = &State{
+		State: model.State{
+			Id:       state.Id,
+			Currency: curr,
+		},
+		limits:           limits,
+		mutex:            s.mutex,
+		db:               s.db,
+		reposCurr:        s.reposCurr,
+		reposCatLimitSet: s.reposCatLimitSet,
+	}
+
+	return
+}
+
 func (s *States) AddState(ctx context.Context) (st *State, err error) {
 	c := s.reposCurr.GetDefault(ctx)
 
@@ -178,9 +240,27 @@ func (s *States) AddState(ctx context.Context) (st *State, err error) {
 		return nil, errors.Wrap(err, "insert state")
 	}
 
-	limits, err := s.reposCatLimitSet.GetByState(ctx, stateId)
+	return &State{
+		State: model.State{
+			Id:       stateId,
+			Currency: c,
+		},
+		limits:           []*category_limit.CategoryLimit{},
+		mutex:            &sync.RWMutex{},
+		db:               s.db,
+		reposCurr:        s.reposCurr,
+		reposCatLimitSet: s.reposCatLimitSet,
+	}, nil
+}
+
+func (s *States) AddStateTx(ctx context.Context, tx *sql.Tx) (st *State, err error) {
+	c := s.reposCurr.GetDefault(ctx)
+
+	var stateId int
+	row := tx.QueryRowContext(ctx, queryInsert, c.Id)
+	err = row.Scan(&stateId)
 	if err != nil {
-		return nil, errors.Wrap(err, "new state")
+		return nil, errors.Wrap(err, "insert state")
 	}
 
 	return &State{
@@ -188,7 +268,7 @@ func (s *States) AddState(ctx context.Context) (st *State, err error) {
 			Id:       stateId,
 			Currency: c,
 		},
-		limits:           limits,
+		limits:           []*category_limit.CategoryLimit{},
 		mutex:            &sync.RWMutex{},
 		db:               s.db,
 		reposCurr:        s.reposCurr,
