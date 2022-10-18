@@ -2,7 +2,7 @@ package model
 
 type State struct {
 	Id       int
-	Currency *Currency
+	Currency Currency
 }
 
 type StateDB struct {

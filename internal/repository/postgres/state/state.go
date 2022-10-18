@@ -37,7 +37,7 @@ type State struct {
 	reposCatLimitSet category_limit.CategoryLimitSet
 }
 
-func (s *State) SetCurrency(ctx context.Context, c *model.Currency) (err error) {
+func (s *State) SetCurrency(ctx context.Context, c model.Currency) (err error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -50,18 +50,18 @@ func (s *State) SetCurrency(ctx context.Context, c *model.Currency) (err error) 
 	return
 }
 
-func (s *State) GetCurrency(ctx context.Context) (c *model.Currency, err error) {
+func (s *State) GetCurrency(ctx context.Context) (c model.Currency, err error) {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 
-	if s.Currency == nil {
+	if s.Currency == c {
 		var state model.StateDB
 		if err = s.db.GetContext(ctx, &state, querySelect, s.Id); err != nil {
-			return nil, errors.Wrap(err, "state get currency")
+			return model.Currency{}, errors.Wrap(err, "state get currency")
 		}
 		s.Currency, err = s.reposCurr.GetById(ctx, state.CurrencyId)
 		if err != nil {
-			return nil, errors.Wrap(err, "state currency not found")
+			return model.Currency{}, errors.Wrap(err, "state currency not found")
 		}
 	}
 

@@ -30,7 +30,7 @@ var (
 )
 
 type Rates struct {
-	m          map[*model.Currency]*rates.Rate
+	m          map[model.Currency]*rates.Rate
 	lastUpdate time.Time
 	loaded     bool
 	mutex      *sync.RWMutex
@@ -41,7 +41,7 @@ type Rates struct {
 
 func NewRates(db *sqlx.DB, reposCurrencies currency.Client) *Rates {
 	return &Rates{
-		m:         make(map[*model.Currency]*rates.Rate),
+		m:         make(map[model.Currency]*rates.Rate),
 		loaded:    false,
 		db:        db,
 		reposCurr: reposCurrencies,
@@ -59,7 +59,7 @@ func (rs *Rates) IsLoaded(ctx context.Context) bool {
 	return rs.loaded
 }
 
-func (rs *Rates) GetRate(ctx context.Context, curr *model.Currency) (*rates.Rate, bool) {
+func (rs *Rates) GetRate(ctx context.Context, curr model.Currency) (*rates.Rate, bool) {
 	rs.mutex.RLock()
 	defer rs.mutex.RUnlock()
 
@@ -130,7 +130,7 @@ func (rs *Rates) UpdateRates(ctx context.Context) (err error) {
 		rs.mutex.Unlock()
 		return errors.Wrap(err, "truncate rates")
 	}
-	rs.m = make(map[*model.Currency]*rates.Rate)
+	rs.m = make(map[model.Currency]*rates.Rate)
 
 	for _, nbrbRate := range nbrbRates {
 		curr, err := rs.reposCurr.GetByAbbr(ctx, nbrbRate.CurAbbreviation)

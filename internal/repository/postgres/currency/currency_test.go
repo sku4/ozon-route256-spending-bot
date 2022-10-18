@@ -20,7 +20,7 @@ func TestNewCurrencies(t *testing.T) {
 	tests := []struct {
 		name    string
 		mock    func()
-		want    []*model.Currency
+		want    []model.Currency
 		wantErr bool
 	}{
 		{
@@ -32,7 +32,7 @@ func TestNewCurrencies(t *testing.T) {
 				mock.ExpectQuery("SELECT (.+) FROM currency").
 					WillReturnRows(rows)
 			},
-			want: []*model.Currency{
+			want: []model.Currency{
 				{
 					Id:   1,
 					Abbr: "USD",

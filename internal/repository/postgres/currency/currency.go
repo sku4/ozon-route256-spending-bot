@@ -10,10 +10,10 @@ import (
 )
 
 type Client interface {
-	All(context.Context) []*model.Currency
-	GetDefault(context.Context) *model.Currency
-	GetByAbbr(context.Context, string) (*model.Currency, error)
-	GetById(context.Context, int) (*model.Currency, error)
+	All(context.Context) []model.Currency
+	GetDefault(context.Context) model.Currency
+	GetByAbbr(context.Context, string) (model.Currency, error)
+	GetById(context.Context, int) (model.Currency, error)
 }
 
 const (
@@ -26,15 +26,15 @@ var (
 )
 
 type Currencies struct {
-	currencies      []*model.Currency
+	currencies      []model.Currency
 	db              *sqlx.DB
 	mutex           *sync.RWMutex
-	defaultCurrency *model.Currency
+	defaultCurrency model.Currency
 }
 
 func NewCurrencies(db *sqlx.DB) (*Currencies, error) {
 	cs := &Currencies{
-		currencies: make([]*model.Currency, 0),
+		currencies: make([]model.Currency, 0),
 		db:         db,
 		mutex:      &sync.RWMutex{},
 	}
@@ -53,7 +53,7 @@ func NewCurrencies(db *sqlx.DB) (*Currencies, error) {
 	return cs, nil
 }
 
-func (cs *Currencies) All(ctx context.Context) []*model.Currency {
+func (cs *Currencies) All(ctx context.Context) []model.Currency {
 	_ = ctx
 
 	cs.mutex.RLock()
@@ -62,7 +62,7 @@ func (cs *Currencies) All(ctx context.Context) []*model.Currency {
 	return cs.currencies
 }
 
-func (cs *Currencies) GetDefault(ctx context.Context) *model.Currency {
+func (cs *Currencies) GetDefault(ctx context.Context) model.Currency {
 	_ = ctx
 
 	cs.mutex.RLock()
@@ -71,7 +71,7 @@ func (cs *Currencies) GetDefault(ctx context.Context) *model.Currency {
 	return cs.defaultCurrency
 }
 
-func (cs *Currencies) GetByAbbr(ctx context.Context, abbr string) (curr *model.Currency, err error) {
+func (cs *Currencies) GetByAbbr(ctx context.Context, abbr string) (curr model.Currency, err error) {
 	_ = ctx
 
 	cs.mutex.RLock()
@@ -83,10 +83,10 @@ func (cs *Currencies) GetByAbbr(ctx context.Context, abbr string) (curr *model.C
 		}
 	}
 
-	return nil, errors.New(fmt.Sprintf("currency '%s' not found", abbr))
+	return model.Currency{}, errors.New(fmt.Sprintf("currency '%s' not found", abbr))
 }
 
-func (cs *Currencies) GetById(ctx context.Context, id int) (curr *model.Currency, err error) {
+func (cs *Currencies) GetById(ctx context.Context, id int) (curr model.Currency, err error) {
 	_ = ctx
 
 	cs.mutex.RLock()
@@ -98,5 +98,5 @@ func (cs *Currencies) GetById(ctx context.Context, id int) (curr *model.Currency
 		}
 	}
 
-	return nil, errors.New(fmt.Sprintf("currency '%d' not found", id))
+	return model.Currency{}, errors.New(fmt.Sprintf("currency '%d' not found", id))
 }
