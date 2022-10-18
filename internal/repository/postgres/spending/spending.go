@@ -21,7 +21,8 @@ var (
 	queryInsert = fmt.Sprintf("INSERT INTO %s (category_id, event_at, price) values ($1, $2, $3) RETURNING id",
 		eventTable)
 	queryDelete = fmt.Sprintf(`DELETE FROM %s WHERE id = $1`, eventTable)
-	queryReport = fmt.Sprintf(`SELECT id, category_id, event_at, price FROM %s WHERE event_at BETWEEN $1 AND $2`,
+	queryReport = fmt.Sprintf(`SELECT category_id, sum(price) as price FROM `+
+		`%s WHERE event_at BETWEEN $1 AND $2 GROUP BY category_id`,
 		eventTable)
 )
 
@@ -75,7 +76,7 @@ func (s Spending) Report(ctx context.Context, f1, f2 time.Time, rates rates.Clie
 	}
 
 	for _, event := range events {
-		stat[event.CategoryId] += decimal.Decimal(event.Price)
+		stat[event.CategoryId] = decimal.Decimal(event.Price)
 	}
 
 	userCtx, err := user.FromContext(ctx)
