@@ -42,7 +42,7 @@ func main() {
 		sugar.Info("Context is stopped")
 	}()
 
-	tgClient, tgServer, err := initTelegramBot(ctx, cfg)
+	tgClient, tgServer, err := InitTelegramBot(ctx, cfg)
 	if err != nil {
 		sugar.Fatalf("error init telegram bot: %s", err.Error())
 	}
@@ -67,7 +67,7 @@ func main() {
 	if err != nil {
 		sugar.Fatalf("failed init repository: %s", err.Error())
 	}
-	ratesClient := initRates(ctx, db, repos)
+	ratesClient := InitRates(ctx, db, repos)
 	services := service.NewService(repos, tgClient, ratesClient)
 	handlers := handler.NewHandler(ctx, services)
 
@@ -86,7 +86,7 @@ func main() {
 	sugar.Info("App Shutting Down")
 }
 
-func initTelegramBot(ctx context.Context, cfg *configs.Config) (tgClient *client.Client, tgServer *tg.Server, err error) {
+func InitTelegramBot(ctx context.Context, cfg *configs.Config) (tgClient *client.Client, tgServer *tg.Server, err error) {
 	tgBot, err := tgbotapi.NewBotAPI(cfg.TelegramBotToken)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "error init telegram bot")
@@ -105,7 +105,7 @@ func initTelegramBot(ctx context.Context, cfg *configs.Config) (tgClient *client
 	return
 }
 
-func initRates(ctx context.Context, db *sqlx.DB, repos *repository.Repository) rates.Client {
+func InitRates(ctx context.Context, db *sqlx.DB, repos *repository.Repository) rates.Client {
 	ratesClient := nbrb.NewRates(db, repos.CurrencyClient)
 	run := ratesClient.UpdateRatesSync(ctx)
 
