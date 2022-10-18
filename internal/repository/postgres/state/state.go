@@ -13,14 +13,27 @@ import (
 )
 
 const (
-	stateTable = "state"
+	stateTable         = "state"
+	currencyTable      = "currency"
+	categoryLimitTable = "category_limit"
+	categoryTable      = "category"
 )
 
 var (
-	queryUpdate  = fmt.Sprintf(`UPDATE %s SET currency_id=$1 WHERE id=$2`, stateTable)
-	querySelect  = fmt.Sprintf(`SELECT id, currency_id FROM %s WHERE id=$1`, stateTable)
-	queryGetById = fmt.Sprintf(`SELECT id, currency_id FROM %s WHERE id=$1`, stateTable)
-	queryInsert  = fmt.Sprintf("INSERT INTO %s (currency_id) values ($1) RETURNING id", stateTable)
+	queryUpdate      = fmt.Sprintf(`UPDATE %s SET currency_id=$1 WHERE id=$2`, stateTable)
+	querySelect      = fmt.Sprintf(`SELECT id, currency_id FROM %s WHERE id=$1`, stateTable)
+	queryInsert      = fmt.Sprintf("INSERT INTO %s (currency_id) values ($1) RETURNING id", stateTable)
+	queryGetWithCurr = fmt.Sprintf(`
+				SELECT st.id, c.id as currency_id, c.abbreviation as currency_abbr 
+						FROM %s as st
+						LEFT JOIN %s as c on c.id = st.currency_id
+						WHERE st.id=$1`, stateTable, currencyTable)
+	queryGetWithLimits = fmt.Sprintf(`
+				SELECT cl.id as category_limit_id, cl.category_id, cat.title as category_title, cl.category_limit 
+						FROM %s as cl
+						LEFT JOIN %s as cat on cat.id = cl.category_id
+						WHERE cl.state_id=$1`,
+		categoryLimitTable, categoryTable)
 )
 
 type Client interface {
@@ -106,19 +119,38 @@ func NewStates(db *sqlx.DB, reposCurr currency.Client, reposCatLimitSet category
 }
 
 func (s *States) GetById(ctx context.Context, id int) (st *State, err error) {
-	var state model.StateDB
-	if err = s.db.GetContext(ctx, &state, queryGetById, id); err != nil {
+	var state model.StateWithLimits
+	if err = s.db.GetContext(ctx, &state, queryGetWithCurr, id); err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("state '%d' not found", id))
 	}
 
-	curr, err := s.reposCurr.GetById(ctx, state.CurrencyId)
-	if err != nil {
+	if state.CurrencyId == 0 {
 		return nil, errors.Wrap(err, fmt.Sprintf("currency '%d' not found", id))
 	}
 
-	limits, err := s.reposCatLimitSet.GetByState(ctx, state.Id)
-	if err != nil {
-		return nil, errors.Wrap(err, "new state")
+	var curr = model.Currency{
+		Id:   state.CurrencyId,
+		Abbr: state.CurrencyAbbr,
+	}
+
+	var stateLimits []model.StateWithLimits
+	if err = s.db.SelectContext(ctx, &stateLimits, queryGetWithLimits, id); err != nil {
+		return nil, errors.Wrap(err, fmt.Sprintf("state limits '%d' not found", id))
+	}
+
+	var limits []*category_limit.CategoryLimit
+	for _, limit := range stateLimits {
+		c := &model.Category{
+			Id:    limit.CategoryId,
+			Title: limit.CategoryTitle,
+		}
+		limitDB := &model.CategoryLimitDB{
+			Id:         limit.CategoryLimitId,
+			Limit:      limit.CategoryLimit,
+			CategoryId: limit.CategoryId,
+			StateId:    id,
+		}
+		limits = append(limits, s.reposCatLimitSet.Create(ctx, c, limitDB))
 	}
 
 	st = &State{

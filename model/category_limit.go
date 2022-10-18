@@ -2,7 +2,6 @@ package model
 
 type CategoryLimit struct {
 	Id       int
-	State    *State
 	Category *Category
 	Limit    int64
 }

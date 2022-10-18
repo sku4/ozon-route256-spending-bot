@@ -14,6 +14,7 @@ import (
 type CategoryLimitSet interface {
 	Set(ctx context.Context, stateId, categoryId int, limit decimal.Decimal) (*CategoryLimit, error)
 	GetByState(ctx context.Context, stateId int) ([]*CategoryLimit, error)
+	Create(ctx context.Context, cat *model.Category, limitDB *model.CategoryLimitDB) *CategoryLimit
 }
 
 const (
@@ -164,4 +165,18 @@ func (cl *CategoryLimit) GetByState(ctx context.Context, stateId int) (cls []*Ca
 	}
 
 	return
+}
+
+func (cl *CategoryLimit) Create(ctx context.Context, cat *model.Category, limitDB *model.CategoryLimitDB) *CategoryLimit {
+	_ = ctx
+
+	return &CategoryLimit{
+		CategoryLimit: model.CategoryLimit{
+			Id:       limitDB.Id,
+			Category: cat,
+		},
+		Limit:          decimal.Decimal(limitDB.Limit),
+		db:             cl.db,
+		categorySearch: cl.categorySearch,
+	}
 }
