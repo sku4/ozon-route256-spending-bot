@@ -18,6 +18,7 @@ type CategoryLimitSet interface {
 
 const (
 	categoryLimitTable = "category_limit"
+	categoryTable      = "category"
 )
 
 var (
@@ -25,8 +26,11 @@ var (
 												values ($1, $2, $3) 
 												ON CONFLICT (state_id, category_id) DO UPDATE 
 												SET category_limit = $3 RETURNING id`, categoryLimitTable)
-	querySelectByState = fmt.Sprintf(`SELECT id, state_id, category_id, category_limit 
-									FROM %s WHERE state_id = $1`, categoryLimitTable)
+	querySelectByState = fmt.Sprintf(`SELECT
+									cl.id, cl.state_id, cl.category_id, c.title as category_title, cl.category_limit 
+									FROM %s as cl
+									LEFT JOIN %s as c ON cl.category_id = c.id
+									WHERE state_id = $1`, categoryLimitTable, categoryTable)
 )
 
 type CategoryLimit struct {
@@ -90,15 +94,13 @@ func (cl *CategoryLimit) GetByState(ctx context.Context, stateId int) (cls []*Ca
 	}
 
 	for _, limitDB := range categoryLimitDB {
-		cat, err := cl.categorySearch.CategoryGetById(ctx, limitDB.CategoryId)
-		if err != nil {
-			return nil, errors.Wrap(err, "get by state")
-		}
-
 		c := &CategoryLimit{
 			CategoryLimit: model.CategoryLimit{
-				Id:       limitDB.Id,
-				Category: cat,
+				Id: limitDB.Id,
+				Category: &model.Category{
+					Id:    limitDB.CategoryId,
+					Title: limitDB.CategoryTitle,
+				},
 			},
 			Limit:          decimal.Decimal(limitDB.Limit),
 			db:             cl.db,
