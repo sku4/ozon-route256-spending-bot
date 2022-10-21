@@ -75,6 +75,7 @@ create table category_limit
 
 -- index by date because report build only by range dates
 create index event_at_idx on event (event_at);
+create unique index category_limit_unique_idx on category_limit (state_id, category_id);
 -- +goose StatementEnd
 
 -- +goose Down

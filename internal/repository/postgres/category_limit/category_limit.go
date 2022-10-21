@@ -2,7 +2,6 @@ package category_limit
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
@@ -22,12 +21,10 @@ const (
 )
 
 var (
-	limitNotFoundError = errors.New("limit not found")
-	queryUpdate        = fmt.Sprintf(`UPDATE %s SET category_limit = $1 WHERE id = $2`, categoryLimitTable)
-	queryInsert        = fmt.Sprintf(`INSERT INTO %s (state_id, category_id, category_limit) 
-												values ($1, $2, $3) RETURNING id`, categoryLimitTable)
-	querySelectByStateCategory = fmt.Sprintf(`SELECT id, state_id, category_id, category_limit 
-									FROM %s WHERE state_id = $1 AND category_id = $2`, categoryLimitTable)
+	queryInsertDoUpdate = fmt.Sprintf(`INSERT INTO %s (state_id, category_id, category_limit) 
+												values ($1, $2, $3) 
+												ON CONFLICT (state_id, category_id) DO UPDATE 
+												SET category_limit = $3 RETURNING id`, categoryLimitTable)
 	querySelectByState = fmt.Sprintf(`SELECT id, state_id, category_id, category_limit 
 									FROM %s WHERE state_id = $1`, categoryLimitTable)
 )
@@ -52,33 +49,6 @@ func (cl *CategoryLimit) Set(ctx context.Context, stateId, categoryId int, limit
 		return nil, errors.Wrap(err, "limit tx begin")
 	}
 
-	categoryLimitState, err := cl.GetByStateCategoryTx(ctx, tx, stateId, categoryId)
-	if err != nil && !errors.Is(err, limitNotFoundError) {
-		errRoll := tx.Rollback()
-		if errRoll != nil {
-			return nil, errors.Wrap(errRoll, "limit rollback")
-		}
-		return nil, errors.Wrap(err, "limit set")
-	} else if err == nil {
-		// update limit
-		_, err = tx.ExecContext(ctx, queryUpdate, limit.Original(), categoryLimitState.Id)
-		if err != nil {
-			errRoll := tx.Rollback()
-			if errRoll != nil {
-				return nil, errors.Wrap(errRoll, "limit rollback")
-			}
-			return nil, errors.Wrap(err, "limit update")
-		}
-
-		err = tx.Commit()
-		if err != nil {
-			return nil, errors.Wrap(err, "limit tx commit")
-		}
-
-		categoryLimitState.Limit = limit
-		return categoryLimitState, nil
-	}
-
 	cat, err := cl.categorySearch.CategoryGetByIdTx(ctx, tx, categoryId)
 	if err != nil {
 		errRoll := tx.Rollback()
@@ -89,14 +59,14 @@ func (cl *CategoryLimit) Set(ctx context.Context, stateId, categoryId int, limit
 	}
 
 	var categoryLimitId int
-	row := tx.QueryRowContext(ctx, queryInsert, stateId, cat.Id, limit.Original())
+	row := tx.QueryRowContext(ctx, queryInsertDoUpdate, stateId, cat.Id, limit.Original())
 	err = row.Scan(&categoryLimitId)
 	if err != nil {
 		errRoll := tx.Rollback()
 		if errRoll != nil {
 			return nil, errors.Wrap(errRoll, "limit rollback")
 		}
-		return nil, errors.Wrap(err, "limit insert")
+		return nil, errors.Wrap(err, "limit insert do update")
 	}
 
 	err = tx.Commit()
@@ -111,33 +81,6 @@ func (cl *CategoryLimit) Set(ctx context.Context, stateId, categoryId int, limit
 		},
 		Limit: limit,
 	}, nil
-}
-
-func (cl *CategoryLimit) GetByStateCategoryTx(ctx context.Context, tx *sql.Tx, stateId, categoryId int) (c *CategoryLimit, err error) {
-	var clDB model.CategoryLimitDB
-	row := tx.QueryRowContext(ctx, querySelectByStateCategory, stateId, categoryId)
-	err = row.Scan(&clDB.Id, &clDB.StateId, &clDB.CategoryId,
-		&clDB.Limit)
-	if err != nil {
-		return nil, errors.Wrap(limitNotFoundError, "limit not found")
-	}
-
-	cat, err := cl.categorySearch.CategoryGetByIdTx(ctx, tx, clDB.CategoryId)
-	if err != nil {
-		return nil, errors.Wrap(err, "get by state category")
-	}
-
-	c = &CategoryLimit{
-		CategoryLimit: model.CategoryLimit{
-			Id:       clDB.Id,
-			Category: cat,
-		},
-		Limit:          decimal.Decimal(clDB.Limit),
-		db:             cl.db,
-		categorySearch: cl.categorySearch,
-	}
-
-	return
 }
 
 func (cl *CategoryLimit) GetByState(ctx context.Context, stateId int) (cls []*CategoryLimit, err error) {
