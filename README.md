@@ -1,5 +1,7 @@
 # Telegram bot accounting for financial spending
 
+System design on [miro.com](https://miro.com/app/board/uXjVPLT339I=/)
+
 Example config file ```configs/config.yml```: 
 
 ```yaml
