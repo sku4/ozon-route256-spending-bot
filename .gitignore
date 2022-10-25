@@ -30,3 +30,4 @@ go.work
 /bin
 /configs/*.yml
 .database
+metrics/data

@@ -48,3 +48,13 @@ make goose-up
 docker compose up
 go test ./... -tags integration
 ```
+
+## Metrics
+
+Prometheus: http://localhost:9090/
+
+Grafana: http://localhost:3000/ (admin/admin)
+
+## Tracing
+
+Jaeger: http://localhost:16686/
