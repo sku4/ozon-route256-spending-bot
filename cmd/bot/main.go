@@ -16,39 +16,31 @@ import (
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/service"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/model/telegram/bot/client"
 	tg "gitlab.ozon.dev/skubach/workshop-1-bot/model/telegram/bot/server"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/log"
-	"go.uber.org/zap"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/logger"
 	"os"
 	"os/signal"
 	"syscall"
 )
 
 func main() {
-	logger, _ := zap.NewProduction()
-	defer func(logger *zap.Logger) {
-		_ = logger.Sync()
-	}(logger)
-	sugar := logger.Sugar()
-
 	cfg, err := configs.Init()
 	if err != nil {
-		sugar.Fatalf("error init config: %s", err.Error())
+		logger.Fatalf("error init config: %s", err.Error())
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
-	ctx = log.ContextWithLogger(ctx, logger)
 	defer func() {
 		stop()
-		sugar.Info("Context is stopped")
+		logger.Info("Context is stopped")
 	}()
 
 	tgClient, tgServer, err := InitTelegramBot(ctx, cfg)
 	if err != nil {
-		sugar.Fatalf("error init telegram bot: %s", err.Error())
+		logger.Fatalf("error init telegram bot: %s", err.Error())
 	}
 
 	if err = godotenv.Load(); err != nil {
-		sugar.Fatalf("error loading env variables: %s", err.Error())
+		logger.Fatalf("error loading env variables: %s", err.Error())
 	}
 
 	db, err := postgres.NewPostgresDB(postgres.Config{
@@ -60,12 +52,12 @@ func main() {
 		Password: os.Getenv("POSTGRES_PASSWORD"),
 	})
 	if err != nil {
-		sugar.Fatalf("failed to initialize db: %s", err.Error())
+		logger.Fatalf("failed to initialize db: %s", err.Error())
 	}
 
 	repos, err := repository.NewRepository(db)
 	if err != nil {
-		sugar.Fatalf("failed init repository: %s", err.Error())
+		logger.Fatalf("failed init repository: %s", err.Error())
 	}
 	ratesClient := InitRates(ctx, db, repos)
 	services := service.NewService(repos, tgClient, ratesClient)
@@ -74,16 +66,16 @@ func main() {
 	quit := make(chan os.Signal, 1)
 	go func() {
 		if err := tgServer.Run(handlers); err != nil {
-			sugar.Fatalf("error occured while running: %s", err.Error())
+			logger.Fatalf("error occured while running: %s", err.Error())
 			quit <- nil
 		}
 	}()
 
-	sugar.Info("App Started")
+	logger.Info("App Started")
 	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
 	<-quit
 
-	sugar.Info("App Shutting Down")
+	logger.Info("App Shutting Down")
 }
 
 func InitTelegramBot(ctx context.Context, cfg *configs.Config) (tgClient *client.Client, tgServer *tg.Server, err error) {

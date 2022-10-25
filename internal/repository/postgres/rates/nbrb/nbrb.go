@@ -11,7 +11,7 @@ import (
 	"gitlab.ozon.dev/skubach/workshop-1-bot/model"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/model/nbrb"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/decimal"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/log"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/logger"
 	"io"
 	"net/http"
 	"sync"
@@ -77,8 +77,6 @@ func (rs *Rates) GetRate(ctx context.Context, curr model.Currency) (*rates.Rate,
 }
 
 func (rs *Rates) UpdateRates(ctx context.Context) (err error) {
-	logger := log.LoggerFromContext(ctx)
-
 	resp, err := http.Get(nbrbRatesUrl)
 	if err != nil {
 		return errors.Wrap(err, "nbrb get rates")
