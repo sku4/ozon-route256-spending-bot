@@ -3,6 +3,7 @@ package middleware
 import (
 	"context"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
+	"github.com/opentracing/opentracing-go"
 	"github.com/pkg/errors"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/rates"
@@ -25,12 +26,17 @@ func NewMiddleware(users repository.Users, client client.BotClient, rates rates.
 }
 
 func (m Middleware) DefineUser(ctx context.Context, update tgbotapi.Update) (context.Context, error) {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "DefineUser")
+	defer span.Finish()
+
 	userId := 0
 	if update.Message != nil {
 		userId = update.Message.From.ID
 	} else if update.CallbackQuery != nil {
 		userId = update.CallbackQuery.From.ID
 	}
+
+	span.SetTag("tgUserId", userId)
 
 	u, err := m.users.AddUser(ctx, userId)
 	if err != nil {

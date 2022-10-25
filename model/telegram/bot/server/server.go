@@ -19,7 +19,10 @@ func NewServer(ctx context.Context, client *tgbotapi.BotAPI) (*Server, error) {
 	}, nil
 }
 
-func (s *Server) Run(h *handler.Handler) error {
+func (s *Server) Run(ctx context.Context, h handler.IHandler) error {
+	h = MetricsMiddleware(h)
+	h = TracingMiddleware(h)
+
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
 
@@ -35,7 +38,7 @@ func (s *Server) Run(h *handler.Handler) error {
 			logger.Infof("[%s] %s", update.CallbackQuery.From.UserName, update.CallbackQuery.Data)
 		}
 
-		err := h.IncomingMessage(update)
+		err := h.IncomingMessage(ctx, update)
 		if err != nil {
 			logger.SInfo("error processing message: ", err)
 		}

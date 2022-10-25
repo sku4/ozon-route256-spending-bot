@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/category"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/rates"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/model"
@@ -24,6 +26,14 @@ var (
 	queryReport = fmt.Sprintf(`SELECT category_id, sum(price) as price FROM `+
 		`%s WHERE event_at BETWEEN $1 AND $2 GROUP BY category_id`,
 		eventTable)
+	histogramEventPrice = promauto.NewHistogram(
+		prometheus.HistogramOpts{
+			Namespace: "bot",
+			Subsystem: "event",
+			Name:      "histogram_summary_event_price",
+			Buckets:   []float64{1, 10, 100, 1000, 10000, 100000, 1000000},
+		},
+	)
 )
 
 type Spending struct {
@@ -54,6 +64,8 @@ func (s *Spending) AddEvent(ctx context.Context, categoryId int, date time.Time,
 	if err != nil {
 		return 0, errors.Wrap(err, "insert event")
 	}
+
+	histogramEventPrice.Observe(price.Float64())
 
 	return
 }

@@ -1,14 +1,15 @@
 package handler
 
 import (
+	"context"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/pkg/errors"
 	"strings"
 )
 
-func (h *Handler) IncomingMessage(update tgbotapi.Update) (err error) {
-	run := h.services.Middleware.UpdateRatesSync(h.ctx)
-	ctx, err := h.services.Middleware.DefineUser(h.ctx, update)
+func (h *Handler) IncomingMessage(ctx context.Context, update tgbotapi.Update) (err error) {
+	run := h.services.Middleware.UpdateRatesSync(ctx)
+	ctx, err = h.services.Middleware.DefineUser(ctx, update)
 	if err != nil {
 		return errors.Wrap(err, "incoming message define user")
 	}

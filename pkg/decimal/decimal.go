@@ -25,6 +25,10 @@ func (d Decimal) Divide(d2 Decimal) Decimal {
 	return Decimal(int64(d) * factor / int64(d2))
 }
 
+func (d Decimal) Float64() float64 {
+	return float64(d) / float64(factor)
+}
+
 func (d Decimal) Format(state fmt.State, verb rune) {
 	i := int64(d)
 	isNegative := i < 0

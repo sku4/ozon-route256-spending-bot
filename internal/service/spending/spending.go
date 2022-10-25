@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
+	"github.com/opentracing/opentracing-go"
 	"github.com/pkg/errors"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/currency"
@@ -387,6 +388,9 @@ func (s *Service) ConvertPrice(ctx context.Context, price decimal.Decimal) (f de
 }
 
 func (s *Service) checkLimitPrice(ctx context.Context, category model.Category) (mess string, err error) {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "CheckLimitPrice")
+	defer span.Finish()
+
 	userCtx, err := user.FromContext(ctx)
 	if err != nil {
 		return "", errors.Wrap(err, "user not found")
@@ -427,6 +431,7 @@ func (s *Service) checkLimitPrice(ctx context.Context, category model.Category) 
 			}
 			sum = sum.Multiply(userRateFloat64)
 			if sum > categoryLimit {
+				span.SetTag("limitPrice", fmt.Sprintf("%s > %s", sum, categoryLimit))
 				mess = fmt.Sprintf("Sum *%.2f %s* by category *%s* over than *%.2f %s*",
 					sum.Divide(userRateFloat64), uCurrency.Abbr,
 					category.Title, categoryLimit.Divide(userRateFloat64), uCurrency.Abbr)

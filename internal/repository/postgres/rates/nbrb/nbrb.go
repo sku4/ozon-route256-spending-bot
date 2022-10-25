@@ -5,7 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/jmoiron/sqlx"
+	"github.com/opentracing/opentracing-go"
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/currency"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/rates"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/model"
@@ -25,8 +28,17 @@ const (
 )
 
 var (
-	queryTruncate = fmt.Sprintf("TRUNCATE TABLE %s", rateTable)
-	queryInsert   = fmt.Sprintf("INSERT INTO %s (currency_id, rate) values ($1, $2)", rateTable)
+	queryTruncate         = fmt.Sprintf("TRUNCATE TABLE %s", rateTable)
+	queryInsert           = fmt.Sprintf("INSERT INTO %s (currency_id, rate) values ($1, $2)", rateTable)
+	HistogramCurrencyRate = promauto.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Namespace: "bot",
+			Subsystem: "rate",
+			Name:      "histogram_currency_rate_value",
+			Buckets:   []float64{1, 5, 10, 25, 50, 60, 75, 100, 120},
+		},
+		[]string{"abbr"},
+	)
 )
 
 type Rates struct {
@@ -77,6 +89,9 @@ func (rs *Rates) GetRate(ctx context.Context, curr model.Currency) (*rates.Rate,
 }
 
 func (rs *Rates) UpdateRates(ctx context.Context) (err error) {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "UpdateRates")
+	defer span.Finish()
+
 	resp, err := http.Get(nbrbRatesUrl)
 	if err != nil {
 		return errors.Wrap(err, "nbrb get rates")
@@ -150,6 +165,11 @@ func (rs *Rates) UpdateRates(ctx context.Context) (err error) {
 			rs.mutex.Unlock()
 			return errors.Wrap(err, "insert rate")
 		}
+
+		span.SetTag(curr.Abbr, r)
+		HistogramCurrencyRate.
+			WithLabelValues(curr.Abbr).
+			Observe(r.Float64())
 
 		rs.m[curr] = &rates.Rate{
 			Currency: curr,

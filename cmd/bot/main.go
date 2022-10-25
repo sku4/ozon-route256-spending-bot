@@ -2,11 +2,14 @@ package main
 
 import (
 	"context"
+	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/jmoiron/sqlx"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	jaeger "github.com/uber/jaeger-client-go/config"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/configs"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/handler"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository"
@@ -17,6 +20,7 @@ import (
 	"gitlab.ozon.dev/skubach/workshop-1-bot/model/telegram/bot/client"
 	tg "gitlab.ozon.dev/skubach/workshop-1-bot/model/telegram/bot/server"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/logger"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -26,6 +30,11 @@ func main() {
 	cfg, err := configs.Init()
 	if err != nil {
 		logger.Fatalf("error init config: %s", err.Error())
+	}
+
+	err = initTracing(cfg)
+	if err != nil {
+		logger.Fatalf("error init tracing: %s", err.Error())
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
@@ -61,12 +70,22 @@ func main() {
 	}
 	ratesClient := InitRates(ctx, db, repos)
 	services := service.NewService(repos, tgClient, ratesClient)
-	handlers := handler.NewHandler(ctx, services)
+	handlers := handler.NewHandler(services)
+
+	http.Handle("/metrics", promhttp.Handler())
 
 	quit := make(chan os.Signal, 1)
 	go func() {
-		if err := tgServer.Run(handlers); err != nil {
+		if err = tgServer.Run(ctx, handlers); err != nil {
 			logger.Fatalf("error occured while running: %s", err.Error())
+			quit <- nil
+		}
+	}()
+
+	go func() {
+		err = http.ListenAndServe(fmt.Sprintf(":%d", cfg.HttpPort), nil)
+		if err != nil {
+			logger.Fatalf("error starting http server", err.Error())
 			quit <- nil
 		}
 	}()
@@ -109,4 +128,16 @@ func InitRates(ctx context.Context, db *sqlx.DB, repos *repository.Repository) r
 	}
 
 	return ratesClient
+}
+
+func initTracing(cfg *configs.Config) (err error) {
+	c := jaeger.Configuration{
+		Sampler: &jaeger.SamplerConfig{
+			Type:  "const",
+			Param: 1,
+		},
+	}
+	_, err = c.InitGlobalTracer(cfg.ServiceName)
+
+	return
 }
