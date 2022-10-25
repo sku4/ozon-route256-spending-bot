@@ -45,11 +45,11 @@ func main() {
 
 	db, err := postgres.NewPostgresDB(postgres.Config{
 		Host:     os.Getenv("POSTGRES_HOST"),
-		Port:     cfg.Port,
-		Username: cfg.Username,
-		DBName:   cfg.DBName,
-		SslMode:  cfg.SslMode,
+		Port:     os.Getenv("POSTGRES_PORT"),
+		Username: os.Getenv("POSTGRES_USER"),
 		Password: os.Getenv("POSTGRES_PASSWORD"),
+		DBName:   os.Getenv("POSTGRES_DB_NAME"),
+		SslMode:  os.Getenv("POSTGRES_SSL"),
 	})
 	if err != nil {
 		logger.Fatalf("failed to initialize db: %s", err.Error())

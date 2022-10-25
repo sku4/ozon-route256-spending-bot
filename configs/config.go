@@ -7,14 +7,6 @@ import (
 
 type Config struct {
 	TelegramBotToken string `mapstructure:"TelegramBotToken"`
-	Postgres         `mapstructure:"Postgres"`
-}
-
-type Postgres struct {
-	Username string `mapstructure:"username"`
-	Port     string `mapstructure:"port"`
-	DBName   string `mapstructure:"dbname"`
-	SslMode  string `mapstructure:"sslmode"`
 }
 
 func Init() (*Config, error) {

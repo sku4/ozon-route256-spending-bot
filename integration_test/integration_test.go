@@ -47,11 +47,11 @@ func (s *SpendingSuite) SetupSuite() {
 
 	s.db, err = postgres.NewPostgresDB(postgres.Config{
 		Host:     os.Getenv("POSTGRES_HOST"),
-		Port:     s.cfg.Port,
-		Username: s.cfg.Username,
-		DBName:   s.cfg.DBName,
-		SslMode:  s.cfg.SslMode,
+		Port:     os.Getenv("POSTGRES_PORT"),
+		Username: os.Getenv("POSTGRES_USER"),
 		Password: os.Getenv("POSTGRES_PASSWORD"),
+		DBName:   os.Getenv("POSTGRES_DB_NAME"),
+		SslMode:  os.Getenv("POSTGRES_SSL"),
 	})
 	s.Require().NoError(err)
 

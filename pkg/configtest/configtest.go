@@ -11,20 +11,12 @@ type ConfigTest struct {
 
 type Test struct {
 	Telegram `mapstructure:"Telegram"`
-	Postgres `mapstructure:"Postgres"`
 }
 
 type Telegram struct {
 	Token  string `mapstructure:"BotToken"`
 	ChatId int64  `mapstructure:"ChatId"`
 	UserId int    `mapstructure:"UserId"`
-}
-
-type Postgres struct {
-	Username string `mapstructure:"username"`
-	Port     string `mapstructure:"port"`
-	DBName   string `mapstructure:"dbname"`
-	SslMode  string `mapstructure:"sslmode"`
 }
 
 func InitConfigTest() (*ConfigTest, error) {
