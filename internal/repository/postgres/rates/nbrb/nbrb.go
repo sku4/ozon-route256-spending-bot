@@ -110,7 +110,7 @@ func (rs *Rates) UpdateRates(ctx context.Context) (err error) {
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		logger.Info(string(body))
+		logger.WithTrace(ctx).Info(string(body))
 		return errors.New(fmt.Sprintf("Response status: %s", resp.Status))
 	}
 
@@ -181,7 +181,7 @@ func (rs *Rates) UpdateRates(ctx context.Context) (err error) {
 	}
 	rs.lastUpdate = time.Now()
 	rs.loaded = true
-	logger.Info("Rates success updates")
+	logger.WithTrace(ctx).Info("Rates success updates")
 	rs.mutex.Unlock()
 
 	return
