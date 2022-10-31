@@ -11,11 +11,13 @@ var (
 )
 
 func init() {
-	localLogger, err := zap.NewProduction()
+	cfg := zap.NewProductionConfig()
+	cfg.DisableCaller = true
+	cfg.DisableStacktrace = true
+	localLogger, err := cfg.Build()
 	if err != nil {
 		log.Fatal("logger init", err)
 	}
-
 	logger = localLogger
 }
 
