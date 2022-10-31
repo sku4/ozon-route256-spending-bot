@@ -59,7 +59,10 @@ func (cs *Currencies) All(ctx context.Context) []model.Currency {
 	cs.mutex.RLock()
 	defer cs.mutex.RUnlock()
 
-	return cs.currencies
+	currencies := make([]model.Currency, len(cs.currencies))
+	copy(currencies, cs.currencies)
+
+	return currencies
 }
 
 func (cs *Currencies) GetDefault(ctx context.Context) model.Currency {
