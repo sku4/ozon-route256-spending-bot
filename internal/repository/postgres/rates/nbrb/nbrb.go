@@ -28,14 +28,11 @@ const (
 )
 
 var (
-	queryTruncate         = fmt.Sprintf("TRUNCATE TABLE %s", rateTable)
-	queryInsert           = fmt.Sprintf("INSERT INTO %s (currency_id, rate) values ($1, $2)", rateTable)
-	HistogramCurrencyRate = promauto.NewHistogramVec(
-		prometheus.HistogramOpts{
-			Namespace: "bot",
-			Subsystem: "rate",
-			Name:      "histogram_currency_rate_value",
-			Buckets:   []float64{1, 5, 10, 25, 50, 60, 75, 100, 120},
+	queryTruncate     = fmt.Sprintf("TRUNCATE TABLE %s", rateTable)
+	queryInsert       = fmt.Sprintf("INSERT INTO %s (currency_id, rate) values ($1, $2)", rateTable)
+	gaugeCurrencyRate = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "gauge_currency_rate_value",
 		},
 		[]string{"abbr"},
 	)
@@ -167,9 +164,9 @@ func (rs *Rates) UpdateRates(ctx context.Context) (err error) {
 		}
 
 		span.SetTag(curr.Abbr, r)
-		HistogramCurrencyRate.
+		gaugeCurrencyRate.
 			WithLabelValues(curr.Abbr).
-			Observe(r.Float64())
+			Set(r.Float64())
 
 		rs.m[curr] = &rates.Rate{
 			Currency: curr,
