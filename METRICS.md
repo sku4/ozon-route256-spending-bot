@@ -1,5 +1,7 @@
 Response time quantiles by telegram commands:
-```histogram_quantile(0.99, sum(rate(bot_http_histogram_response_time_seconds_bucket[10s])) by (le, cmd))```
+```histogram_quantile(0.5, sum(rate(bot_http_histogram_response_time_milliseconds_bucket[10s])) by (le, cmd))```
+```histogram_quantile(0.9, sum(rate(bot_http_histogram_response_time_milliseconds_bucket[10s])) by (le, cmd))```
+```histogram_quantile(0.99, sum(rate(bot_http_histogram_response_time_milliseconds_bucket[10s])) by (le, cmd))```
 
 HTTP requests per second:
 ```rate(bot_http_histogram_response_time_seconds_count[10s])```
