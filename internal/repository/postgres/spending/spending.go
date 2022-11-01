@@ -26,13 +26,14 @@ var (
 	queryReport = fmt.Sprintf(`SELECT category_id, sum(price) as price FROM `+
 		`%s WHERE event_at BETWEEN $1 AND $2 GROUP BY category_id`,
 		eventTable)
-	histogramEventPrice = promauto.NewHistogram(
+	histogramEventPrice = promauto.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Namespace: "bot",
 			Subsystem: "event",
-			Name:      "histogram_summary_event_price",
+			Name:      "histogram_summary_event_category_price",
 			Buckets:   []float64{1, 10, 100, 1000, 10000, 100000, 1000000},
 		},
+		[]string{"category"},
 	)
 )
 
@@ -65,7 +66,9 @@ func (s *Spending) AddEvent(ctx context.Context, categoryId int, date time.Time,
 		return 0, errors.Wrap(err, "insert event")
 	}
 
-	histogramEventPrice.Observe(price.Float64())
+	histogramEventPrice.
+		WithLabelValues(cat.Title).
+		Observe(price.Float64())
 
 	return
 }

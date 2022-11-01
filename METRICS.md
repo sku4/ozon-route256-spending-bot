@@ -9,5 +9,5 @@ HTTP requests per second:
 Currency rates by abbreviation:
 ```sum(gauge_currency_rate_value) by (le, abbr)```
 
-Avg price by all events:
-```bot_event_histogram_summary_event_price_sum / bot_event_histogram_summary_event_price_count```
+Avg price by category "Auto" events:
+```bot_event_histogram_summary_event_category_price_sum / bot_event_histogram_summary_event_category_price_count{category="Auto"}```
