@@ -32,15 +32,15 @@ func (s *Server) Run(ctx context.Context, h handler.IHandler) error {
 
 	for update := range updates {
 		if update.Message != nil {
-			logger.Infof("[%s] %s", update.Message.From.UserName, update.Message.Text)
+			logger.Infos(update.Message.From.UserName, update.Message.Text)
 		}
 		if update.CallbackQuery != nil {
-			logger.Infof("[%s] %s", update.CallbackQuery.From.UserName, update.CallbackQuery.Data)
+			logger.Infos(update.CallbackQuery.From.UserName, update.CallbackQuery.Data)
 		}
 
 		err := h.IncomingMessage(ctx, update)
 		if err != nil {
-			logger.SInfo("error processing message: ", err)
+			logger.Infos("error processing message: ", err)
 		}
 	}
 	return nil

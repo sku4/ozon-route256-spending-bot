@@ -15,8 +15,8 @@ var (
 
 func init() {
 	cfg := zap.NewProductionConfig()
-	cfg.DisableCaller = true
-	cfg.DisableStacktrace = true
+	cfg.DisableCaller = false
+	cfg.DisableStacktrace = false
 	localLogger, err := cfg.Build()
 	if err != nil {
 		log.Fatal("logger init", err)
@@ -28,14 +28,9 @@ func Info(msg string, fields ...zap.Field) {
 	logger.Info(msg, fields...)
 }
 
-func SInfo(args ...interface{}) {
+func Infos(args ...interface{}) {
 	sugar := logger.Sugar()
 	sugar.Info(args...)
-}
-
-func Infof(template string, args ...interface{}) {
-	sugar := logger.Sugar()
-	sugar.Infof(template, args...)
 }
 
 func Fatalf(template string, args ...interface{}) {
