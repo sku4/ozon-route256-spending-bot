@@ -10,6 +10,7 @@ import (
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/category"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/rates"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/model"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/cache"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/decimal"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/user"
 	"time"
@@ -83,12 +84,24 @@ func (s *Spending) DeleteEvent(ctx context.Context, id int) (err error) {
 }
 
 func (s Spending) Report(ctx context.Context, f1, f2 time.Time, rates rates.Client) (m map[int]decimal.Decimal, err error) {
-	stat := make(map[int]decimal.Decimal)
-
 	var events []model.EventDB
-	if err = s.db.SelectContext(ctx, &events, queryReport, f1.Format("2006-01-02"), f2.Format("2006-01-02")); err != nil {
-		return nil, errors.Wrap(err, "select report")
+	keyCacheReport := fmt.Sprintf("events_report_%s_%s", f1.Format("2006_01_02"), f2.Format("2006_01_02"))
+	err = cache.Once(&cache.Item{
+		Key:   keyCacheReport,
+		Value: &events,
+		TTL:   time.Minute * 10,
+	}, func(*cache.Item) (interface{}, error) {
+		if err = s.db.SelectContext(ctx, &events, queryReport,
+			f1.Format("2006-01-02"), f2.Format("2006-01-02")); err != nil {
+			return nil, errors.Wrap(err, "select report")
+		}
+		return &events, nil
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "report cache")
 	}
+
+	stat := make(map[int]decimal.Decimal)
 
 	for _, event := range events {
 		stat[event.CategoryId] = decimal.Decimal(event.Price)

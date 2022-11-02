@@ -8,6 +8,8 @@ services:
       context: ./
       dockerfile: Dockerfile
     depends_on:
+      cache:
+        condition: service_started
       db:
         condition: service_healthy
     environment:
@@ -17,6 +19,9 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_SSL=disable
+      - REDIS_HOST=cache
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=redis
 
   db:
     image: postgres:14.5
@@ -65,3 +70,13 @@ services:
       - "16686:16686" # web
       - "14268:14268"
       - "9411:9411"
+
+  cache:
+    image: "spending/cache"
+    build:
+      context: ./redis
+      dockerfile: ./Dockerfile
+    restart: always
+    ports:
+      - "6379:6379"
+    command: redis-server /usr/local/etc/redis/redis.conf --save 20 1 --loglevel warning --requirepass redis
