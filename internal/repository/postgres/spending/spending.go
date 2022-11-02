@@ -90,8 +90,8 @@ func (s Spending) Report(ctx context.Context, f1, f2 time.Time, rates rates.Clie
 		Key:   keyCacheReport,
 		Value: &events,
 		TTL:   time.Minute * 10,
-	}, func(*cache.Item) (interface{}, error) {
-		if err = s.db.SelectContext(ctx, &events, queryReport,
+	}, func(ci *cache.Item) (interface{}, error) {
+		if err = s.db.SelectContext(ci.Ctx, &events, queryReport,
 			f1.Format("2006-01-02"), f2.Format("2006-01-02")); err != nil {
 			return nil, errors.Wrap(err, "select report")
 		}
