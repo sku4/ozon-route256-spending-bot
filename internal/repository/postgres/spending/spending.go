@@ -97,7 +97,7 @@ func (s Spending) Report(ctx context.Context, f1, f2 time.Time, rates rates.Clie
 			return nil, errors.Wrap(err, "select report")
 		}
 		return &events, nil
-	})
+	}, "report")
 	if err != nil {
 		return nil, errors.Wrap(err, "report cache")
 	}

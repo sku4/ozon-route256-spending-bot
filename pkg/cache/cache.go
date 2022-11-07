@@ -4,15 +4,23 @@ import (
 	redisCache "github.com/go-redis/cache/v8"
 	"github.com/go-redis/redis/v8"
 	"github.com/joho/godotenv"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/logger"
 	"os"
 	"time"
 )
 
 var (
-	cache *redisCache.Cache
-	size  = 1000
-	ttl   = time.Minute
+	cache      *redisCache.Cache
+	size       = 1000
+	ttl        = time.Minute
+	cacheTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "cache_total",
+		},
+		[]string{"key", "from_cache"},
+	)
 )
 
 type Item redisCache.Item
@@ -33,9 +41,13 @@ func init() {
 	})
 }
 
-func Once(item *Item, do Do) (err error) {
+func Once(item *Item, do Do, metricName string) (err error) {
+	fromCache := "1"
 	item.Do = func(*redisCache.Item) (interface{}, error) {
+		fromCache = "0"
 		return do(item)
 	}
-	return cache.Once((*redisCache.Item)(item))
+	err = cache.Once((*redisCache.Item)(item))
+	cacheTotal.WithLabelValues(metricName, fromCache).Inc()
+	return
 }

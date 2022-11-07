@@ -11,3 +11,6 @@ Currency rates by abbreviation:
 
 Avg price by category "Auto" events:
 ```bot_event_histogram_summary_event_category_price_sum / bot_event_histogram_summary_event_category_price_count{category="Auto"}```
+
+Effective use cache for reports:
+```sum(cache_total{key="report",from_cache="1"}) * 100 / sum(cache_total{key="report"})```
