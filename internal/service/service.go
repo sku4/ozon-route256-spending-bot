@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"github.com/Shopify/sarama"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/rates"
@@ -57,9 +58,9 @@ type Service struct {
 	Middleware
 }
 
-func NewService(repos *repository.Repository, client client.BotClient, rates rates.Client) *Service {
+func NewService(repos *repository.Repository, client client.BotClient, rates rates.Client, kafkaProducer sarama.AsyncProducer) *Service {
 	return &Service{
-		Spending:   spending.NewService(repos.Spending, repos.Categories, repos.CurrencyClient, client, rates),
+		Spending:   spending.NewService(repos.Spending, repos.Categories, repos.CurrencyClient, client, rates, kafkaProducer),
 		Middleware: middleware.NewMiddleware(repos.Users, client, rates),
 	}
 }

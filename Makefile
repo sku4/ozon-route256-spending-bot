@@ -73,3 +73,9 @@ goose-status:
 	goose -dir migrations postgres \
 		"port=5432 user=postgres dbname=postgres password=${POSTGRES_PASSWORD} sslmode=disable" \
 		status
+
+buf:
+	cd ./proto && buf generate
+
+buf-lint:
+	buf lint

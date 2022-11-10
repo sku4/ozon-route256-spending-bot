@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  app:
+  app-bot:
     image: "spending/bot"
     restart: always
     build:
@@ -80,3 +80,23 @@ services:
     ports:
       - "6379:6379"
     command: redis-server /usr/local/etc/redis/redis.conf --save 20 1 --loglevel warning --requirepass redis
+
+  kafka:
+    image: wurstmeister/kafka
+    hostname: kafka
+    ports:
+      - "9092:9092"
+    links:
+      - zookeeper
+    environment:
+      KAFKA_ADVERTISED_HOST_NAME: "127.0.0.1"
+      KAFKA_ADVERTISED_PORT: "9092"
+      KAFKA_ZOOKEEPER_CONNECT: "zookeeper:2181"
+      KAFKA_CREATE_TOPICS: "report:1:1"
+    depends_on:
+      - zookeeper
+
+  zookeeper:
+    image: wurstmeister/zookeeper
+    ports:
+      - "2181:2181"

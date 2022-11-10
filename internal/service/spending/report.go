@@ -2,11 +2,12 @@ package spending
 
 import (
 	"context"
-	"fmt"
+	"encoding/json"
+	"github.com/Shopify/sarama"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/pkg/errors"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/rates"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/model/kafka"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/logger"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/user"
 	"time"
 )
@@ -25,21 +26,9 @@ func (s *Service) Report7(ctx context.Context, update tgbotapi.Update) (err erro
 	f2 := f1.AddDate(0, 0, 6)
 	f2 = time.Date(f2.Year(), f2.Month(), f2.Day(), 23, 59, 59, 0, f2.Location())
 
-	report, err := buildReport(ctx, s.reposSpend, s.reposCat, s.rates, f1, f2)
+	err = s.buildReport(ctx, update, f1, f2)
 	if err != nil {
 		return errors.Wrap(err, "build report 7")
-	}
-	r := ""
-	f := "2 Jan 06"
-	if report == "" {
-		r = fmt.Sprintf("Report by week (*%s - %s*): spending not found", f1.Format(f), f2.Format(f))
-	} else {
-		r = fmt.Sprintf("Report by week (*%s - %s*):\n", f1.Format(f), f2.Format(f)) + report
-	}
-
-	err = s.client.SendMessage(r, update.Message.Chat.ID)
-	if err != nil {
-		return err
 	}
 
 	return
@@ -50,21 +39,9 @@ func (s *Service) Report31(ctx context.Context, update tgbotapi.Update) (err err
 	f1 := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
 	f2 := time.Date(f1.Year(), f1.Month()+1, 0, 23, 59, 59, 0, f1.Location())
 
-	report, err := buildReport(ctx, s.reposSpend, s.reposCat, s.rates, f1, f2)
+	err = s.buildReport(ctx, update, f1, f2)
 	if err != nil {
 		return errors.Wrap(err, "build report 31")
-	}
-	r := ""
-	f := "2 Jan 06"
-	if report == "" {
-		r = fmt.Sprintf("Report by month (*%s - %s*): spending not found", f1.Format(f), f2.Format(f))
-	} else {
-		r = fmt.Sprintf("Report by month (*%s - %s*):\n", f1.Format(f), f2.Format(f)) + report
-	}
-
-	err = s.client.SendMessage(r, update.Message.Chat.ID)
-	if err != nil {
-		return err
 	}
 
 	return
@@ -76,56 +53,47 @@ func (s *Service) Report365(ctx context.Context, update tgbotapi.Update) (err er
 	f2 := f1.AddDate(1, 0, -1)
 	f2 = time.Date(f2.Year(), f2.Month(), f2.Day(), 23, 59, 59, f2.Nanosecond(), f2.Location())
 
-	report, err := buildReport(ctx, s.reposSpend, s.reposCat, s.rates, f1, f2)
+	err = s.buildReport(ctx, update, f1, f2)
 	if err != nil {
 		return errors.Wrap(err, "build report 365")
-	}
-	r := ""
-	f := "2 Jan 06"
-	if report == "" {
-		r = fmt.Sprintf("Report by year (*%s - %s*): spending not found", f1.Format(f), f2.Format(f))
-	} else {
-		r = fmt.Sprintf("Report by year (*%s - %s*):\n", f1.Format(f), f2.Format(f)) + report
-	}
-
-	err = s.client.SendMessage(r, update.Message.Chat.ID)
-	if err != nil {
-		return err
 	}
 
 	return
 }
 
-func buildReport(ctx context.Context, reposSpend repository.Spending, reposCat repository.Categories, rates rates.Client, f1, f2 time.Time) (string, error) {
-	report := ""
-	m, err := reposSpend.Report(ctx, f1, f2, rates)
-	if err != nil {
-		return "", err
-	}
-
+func (s *Service) buildReport(ctx context.Context, update tgbotapi.Update, f1, f2 time.Time) error {
 	userCtx, err := user.FromContext(ctx)
 	if err != nil {
-		return "", errors.Wrap(err, "user not found")
+		return errors.Wrap(err, "buildReport")
 	}
-	uState, err := userCtx.GetState(ctx)
+	userState, err := userCtx.GetState(ctx)
 	if err != nil {
-		return "", errors.Wrap(err, "state not found")
+		return errors.Wrap(err, "buildReport")
 	}
-	uCurrency, err := uState.GetCurrency(ctx)
+	userCurrency, err := userState.GetCurrency(ctx)
 	if err != nil {
-		return "", errors.Wrap(err, "currency not found")
-	}
-	userCurrAbbr := uCurrency.Abbr
-
-	categories, err := reposCat.Categories(ctx)
-	if err != nil {
-		return "", errors.Wrap(err, "report categories")
-	}
-	for _, category := range categories {
-		if sum, ok := m[category.Id]; ok {
-			report += fmt.Sprintf("_%s_ - %.2f %s\n", category.Title, sum, userCurrAbbr)
-		}
+		return errors.Wrap(err, "buildReport")
 	}
 
-	return report, nil
+	reportJson, err := json.Marshal(kafka.Report{
+		F1:       f1,
+		F2:       f2,
+		ChatId:   update.Message.Chat.ID,
+		UserCurr: userCurrency,
+	})
+	if err != nil {
+		return err
+	}
+
+	msgReport := sarama.ProducerMessage{
+		Topic: kafka.TopicReport,
+		Key:   sarama.StringEncoder("report"),
+		Value: sarama.StringEncoder(reportJson),
+	}
+
+	s.kafkaProducer.Input() <- &msgReport
+	successMsg := <-s.kafkaProducer.Successes()
+	logger.Infos("Successful to write message, offset:", successMsg.Offset)
+
+	return nil
 }

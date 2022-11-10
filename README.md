@@ -25,6 +25,7 @@ POSTGRES_SSL=disable
 REDIS_HOST=localhost
 REDIS_PORT=6379
 REDIS_PASSWORD=redis
+KAFKA_ADVERTISED_PORT=9092
 ```
 ## Available commands:
 - /categories
@@ -61,3 +62,7 @@ Grafana: http://localhost:3000/ (admin/admin)
 ## Tracing
 
 Jaeger: http://localhost:16686/
+
+## Build protobuf
+
+Use ```make buf``` to build protobuf files

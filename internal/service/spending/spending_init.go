@@ -2,6 +2,8 @@ package spending
 
 import (
 	"context"
+	"fmt"
+	"github.com/Shopify/sarama"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
@@ -10,8 +12,10 @@ import (
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/currency"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/rates"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/rates/nbrb"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/model/kafka"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/model/telegram/bot/client"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/configtest"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/logger"
 	"strings"
 )
 
@@ -36,10 +40,16 @@ func NewServiceTest(ctx context.Context) (st *ServiceTest, service *Service, moc
 	tgClient, _ := st.initTelegramBot()
 	st.initMock()
 
+	kafkaProducer, err := st.initKafkaProducer(kafka.BrokersList)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	defer kafkaProducer.Close()
+
 	repos, _ := repository.NewRepository(st.DB)
 	reposCurrencies, _ := currency.NewCurrencies(st.DB)
 	ratesClient := st.initRates(repos)
-	st.Service = NewService(repos.Spending, repos.Categories, reposCurrencies, tgClient, ratesClient)
+	st.Service = NewService(repos.Spending, repos.Categories, reposCurrencies, tgClient, ratesClient, kafkaProducer)
 
 	return st, st.Service, st.Mock, nil
 }
@@ -66,6 +76,25 @@ func (st *ServiceTest) initTelegramBot() (tgClient *client.Client, err error) {
 	}
 
 	return
+}
+
+func (st *ServiceTest) initKafkaProducer(brokerList []string) (sarama.AsyncProducer, error) {
+	config := sarama.NewConfig()
+	config.Version = sarama.V3_2_3_0
+	config.Producer.Return.Successes = true
+
+	producer, err := sarama.NewAsyncProducer(brokerList, config)
+	if err != nil {
+		return nil, fmt.Errorf("starting Sarama producer: %w", err)
+	}
+
+	go func() {
+		for err = range producer.Errors() {
+			logger.Infos("Failed to write message:", err)
+		}
+	}()
+
+	return producer, nil
 }
 
 func (st *ServiceTest) initRates(repos *repository.Repository) rates.Client {

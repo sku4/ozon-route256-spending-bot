@@ -3,6 +3,7 @@ package spending
 import (
 	"context"
 	"fmt"
+	"github.com/Shopify/sarama"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/opentracing/opentracing-go"
 	"github.com/pkg/errors"
@@ -21,11 +22,12 @@ import (
 //go:generate mockgen -source=spending.go -destination=mocks/spending.go
 
 type Service struct {
-	reposSpend repository.Spending
-	reposCurr  currency.Client
-	reposCat   repository.Categories
-	client     client.BotClient
-	rates      rates.Client
+	reposSpend    repository.Spending
+	reposCurr     currency.Client
+	reposCat      repository.Categories
+	client        client.BotClient
+	rates         rates.Client
+	kafkaProducer sarama.AsyncProducer
 }
 
 type Event struct {
@@ -49,13 +51,14 @@ func NewEvent(price float64) *Event {
 }
 
 func NewService(reposSpending repository.Spending, reposCategories repository.Categories, reposCurrencies currency.Client, client client.BotClient,
-	rates rates.Client) *Service {
+	rates rates.Client, kafkaProducer sarama.AsyncProducer) *Service {
 	return &Service{
-		reposCat:   reposCategories,
-		reposSpend: reposSpending,
-		reposCurr:  reposCurrencies,
-		client:     client,
-		rates:      rates,
+		reposCat:      reposCategories,
+		reposSpend:    reposSpending,
+		reposCurr:     reposCurrencies,
+		client:        client,
+		rates:         rates,
+		kafkaProducer: kafkaProducer,
 	}
 }
 
