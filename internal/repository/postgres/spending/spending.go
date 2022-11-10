@@ -12,7 +12,6 @@ import (
 	"gitlab.ozon.dev/skubach/workshop-1-bot/model"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/cache"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/decimal"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/user"
 	"time"
 )
 
@@ -83,7 +82,7 @@ func (s *Spending) DeleteEvent(ctx context.Context, id int) (err error) {
 	return
 }
 
-func (s Spending) Report(ctx context.Context, f1, f2 time.Time, rates rates.Client) (m map[int]decimal.Decimal, err error) {
+func (s Spending) Report(ctx context.Context, f1, f2 time.Time, rates rates.Client, userCurrency model.Currency) (m map[int]decimal.Decimal, err error) {
 	var events []model.EventDB
 	keyCacheReport := fmt.Sprintf("events_report_%s_%s", f1.Format("2006_01_02"), f2.Format("2006_01_02"))
 	err = cache.Once(&cache.Item{
@@ -108,19 +107,7 @@ func (s Spending) Report(ctx context.Context, f1, f2 time.Time, rates rates.Clie
 		stat[event.CategoryId] = decimal.Decimal(event.Price)
 	}
 
-	userCtx, err := user.FromContext(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "user not found")
-	}
-	userState, err := userCtx.GetState(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "user state")
-	}
-	userCurr, err := userState.GetCurrency(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "user currency")
-	}
-	rateUserCurr, ok := rates.GetRate(ctx, userCurr)
+	rateUserCurr, ok := rates.GetRate(ctx, userCurrency)
 	if !ok {
 		return nil, errors.Wrap(err, "user currency not found")
 	}

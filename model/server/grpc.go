@@ -3,10 +3,8 @@ package server
 import (
 	"context"
 	"fmt"
-	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
-	grpc_auth "github.com/grpc-ecosystem/go-grpc-middleware/auth"
 	"github.com/pkg/errors"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/handler"
+	hgrpc "gitlab.ozon.dev/skubach/workshop-1-bot/internal/handler/grpc"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/api"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/logger"
 	"google.golang.org/grpc"
@@ -17,18 +15,18 @@ import (
 type Grpc struct {
 	ctx         context.Context
 	grpcService *grpc.Server
-	handler     *handler.Handler
+	handler     *hgrpc.Handler
 }
 
 // NewGrpc created new grpc server
-func NewGrpc(ctx context.Context, handler *handler.Handler) *Grpc {
+func NewGrpc(ctx context.Context, handler *hgrpc.Handler) *Grpc {
 	return &Grpc{
 		ctx: ctx,
 		// grpc middleware
 		grpcService: grpc.NewServer(
-			grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
-				grpc_auth.UnaryServerInterceptor(handler.Auth),
-			)),
+		/*grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
+			grpc_auth.UnaryServerInterceptor(handler.Auth),
+		)),*/
 		),
 		handler: handler,
 	}
@@ -36,7 +34,7 @@ func NewGrpc(ctx context.Context, handler *handler.Handler) *Grpc {
 
 // Run grpc on port with handler
 func (g *Grpc) Run(port int) (err error) {
-	api.RegisterMnemosyneServer(g.grpcService, g.handler)
+	api.RegisterSpendingServer(g.grpcService, g.handler)
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		return errors.Wrap(err, "failed to listen")

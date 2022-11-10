@@ -2,17 +2,32 @@ syntax = "proto3";
 
 package api;
 import "google/api/annotations.proto";
-import "helloworld/helloworld.proto";
+import "report/report.proto";
 import "protoc-gen-openapiv2/options/annotations.proto";
 option go_package = "gitlab.ozon.dev/skubach/workshop-1-bot/pkg/api";
 
+option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
+  info: {
+    title: "Spending App API"
+    description: "API Server for Spending application"
+    version: "1.0"
+  }
+  host: "localhost:8080"
+  schemes: HTTP
+  schemes: HTTPS
+  consumes: "application/json"
+  produces: "application/json"
+};
+
 // The greeting service definition.
-service Mnemosyne {
+service Spending {
   // Sends a greeting
-  rpc SayHello (helloworld.HelloRequest) returns (helloworld.HelloReply) {
+  rpc SendReport (report.Report) returns (Empty) {
     option (google.api.http) = {
-      post: "/mnemosyne"
+      post: "/send-report"
       body: "*"
     };
   }
 }
+
+message Empty {}

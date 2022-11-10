@@ -8,7 +8,7 @@ package api
 
 import (
 	context "context"
-	helloworld "gitlab.ozon.dev/skubach/workshop-1-bot/pkg/api/helloworld"
+	report "gitlab.ozon.dev/skubach/workshop-1-bot/pkg/api/report"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -19,86 +19,86 @@ import (
 // Requires gRPC-Go v1.32.0 or later.
 const _ = grpc.SupportPackageIsVersion7
 
-// MnemosyneClient is the client API for Mnemosyne service.
+// SpendingClient is the client API for Spending service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type MnemosyneClient interface {
+type SpendingClient interface {
 	// Sends a greeting
-	SayHello(ctx context.Context, in *helloworld.HelloRequest, opts ...grpc.CallOption) (*helloworld.HelloReply, error)
+	SendReport(ctx context.Context, in *report.Report, opts ...grpc.CallOption) (*Empty, error)
 }
 
-type mnemosyneClient struct {
+type spendingClient struct {
 	cc grpc.ClientConnInterface
 }
 
-func NewMnemosyneClient(cc grpc.ClientConnInterface) MnemosyneClient {
-	return &mnemosyneClient{cc}
+func NewSpendingClient(cc grpc.ClientConnInterface) SpendingClient {
+	return &spendingClient{cc}
 }
 
-func (c *mnemosyneClient) SayHello(ctx context.Context, in *helloworld.HelloRequest, opts ...grpc.CallOption) (*helloworld.HelloReply, error) {
-	out := new(helloworld.HelloReply)
-	err := c.cc.Invoke(ctx, "/api.Mnemosyne/SayHello", in, out, opts...)
+func (c *spendingClient) SendReport(ctx context.Context, in *report.Report, opts ...grpc.CallOption) (*Empty, error) {
+	out := new(Empty)
+	err := c.cc.Invoke(ctx, "/api.Spending/SendReport", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-// MnemosyneServer is the server API for Mnemosyne service.
-// All implementations should embed UnimplementedMnemosyneServer
+// SpendingServer is the server API for Spending service.
+// All implementations should embed UnimplementedSpendingServer
 // for forward compatibility
-type MnemosyneServer interface {
+type SpendingServer interface {
 	// Sends a greeting
-	SayHello(context.Context, *helloworld.HelloRequest) (*helloworld.HelloReply, error)
+	SendReport(context.Context, *report.Report) (*Empty, error)
 }
 
-// UnimplementedMnemosyneServer should be embedded to have forward compatible implementations.
-type UnimplementedMnemosyneServer struct {
+// UnimplementedSpendingServer should be embedded to have forward compatible implementations.
+type UnimplementedSpendingServer struct {
 }
 
-func (UnimplementedMnemosyneServer) SayHello(context.Context, *helloworld.HelloRequest) (*helloworld.HelloReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SayHello not implemented")
+func (UnimplementedSpendingServer) SendReport(context.Context, *report.Report) (*Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SendReport not implemented")
 }
 
-// UnsafeMnemosyneServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to MnemosyneServer will
+// UnsafeSpendingServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to SpendingServer will
 // result in compilation errors.
-type UnsafeMnemosyneServer interface {
-	mustEmbedUnimplementedMnemosyneServer()
+type UnsafeSpendingServer interface {
+	mustEmbedUnimplementedSpendingServer()
 }
 
-func RegisterMnemosyneServer(s grpc.ServiceRegistrar, srv MnemosyneServer) {
-	s.RegisterService(&Mnemosyne_ServiceDesc, srv)
+func RegisterSpendingServer(s grpc.ServiceRegistrar, srv SpendingServer) {
+	s.RegisterService(&Spending_ServiceDesc, srv)
 }
 
-func _Mnemosyne_SayHello_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(helloworld.HelloRequest)
+func _Spending_SendReport_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(report.Report)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(MnemosyneServer).SayHello(ctx, in)
+		return srv.(SpendingServer).SendReport(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/api.Mnemosyne/SayHello",
+		FullMethod: "/api.Spending/SendReport",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MnemosyneServer).SayHello(ctx, req.(*helloworld.HelloRequest))
+		return srv.(SpendingServer).SendReport(ctx, req.(*report.Report))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-// Mnemosyne_ServiceDesc is the grpc.ServiceDesc for Mnemosyne service.
+// Spending_ServiceDesc is the grpc.ServiceDesc for Spending service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
-var Mnemosyne_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "api.Mnemosyne",
-	HandlerType: (*MnemosyneServer)(nil),
+var Spending_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "api.Spending",
+	HandlerType: (*SpendingServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "SayHello",
-			Handler:    _Mnemosyne_SayHello_Handler,
+			MethodName: "SendReport",
+			Handler:    _Spending_SendReport_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -9,6 +9,7 @@ import (
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/service/middleware"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/service/spending"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/model/telegram/bot/client"
+	"time"
 )
 
 //go:generate mockgen -source=service.go -destination=mocks/service.go
@@ -40,6 +41,7 @@ type Report interface {
 	Report7(context.Context, tgbotapi.Update) error
 	Report31(context.Context, tgbotapi.Update) error
 	Report365(context.Context, tgbotapi.Update) error
+	SendReport(context.Context, string, time.Time, time.Time, int64) error
 }
 
 type Middleware interface {

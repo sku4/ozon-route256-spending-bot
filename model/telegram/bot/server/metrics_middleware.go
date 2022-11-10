@@ -3,7 +3,7 @@ package server
 import (
 	"context"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/handler"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/handler/telegram"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -37,8 +37,8 @@ var (
 	)
 )
 
-func MetricsMiddleware(next handler.IHandler) handler.IHandler {
-	hr := handler.Func(func(ctx context.Context, upd tgbotapi.Update) (err error) {
+func MetricsMiddleware(next telegram.IHandler) telegram.IHandler {
+	hr := telegram.Func(func(ctx context.Context, upd tgbotapi.Update) (err error) {
 		startTime := time.Now()
 		if err = next.IncomingMessage(ctx, upd); err != nil {
 			return err
@@ -66,8 +66,8 @@ func MetricsMiddleware(next handler.IHandler) handler.IHandler {
 	return wrappedHandler
 }
 
-func InstrumentHandlerInFlight(g prometheus.Gauge, next handler.IHandler) handler.IHandler {
-	return handler.Func(func(ctx context.Context, upd tgbotapi.Update) (err error) {
+func InstrumentHandlerInFlight(g prometheus.Gauge, next telegram.IHandler) telegram.IHandler {
+	return telegram.Func(func(ctx context.Context, upd tgbotapi.Update) (err error) {
 		g.Inc()
 		defer g.Dec()
 		if err = next.IncomingMessage(ctx, upd); err != nil {

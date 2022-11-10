@@ -21,7 +21,7 @@ import (
 type Spending interface {
 	AddEvent(context.Context, int, time.Time, decimal.Decimal) (int, error)
 	DeleteEvent(context.Context, int) error
-	Report(context.Context, time.Time, time.Time, rates.Client) (map[int]decimal.Decimal, error)
+	Report(context.Context, time.Time, time.Time, rates.Client, model.Currency) (map[int]decimal.Decimal, error)
 }
 
 type Categories interface {

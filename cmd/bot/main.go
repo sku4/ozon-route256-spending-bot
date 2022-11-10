@@ -9,20 +9,20 @@ import (
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	"github.com/pkg/errors"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	jaeger "github.com/uber/jaeger-client-go/config"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/configs"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/handler"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/handler/grpc"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/handler/telegram"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/rates"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/rates/nbrb"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/service"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/model/kafka"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/model/server"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/model/telegram/bot/client"
 	tg "gitlab.ozon.dev/skubach/workshop-1-bot/model/telegram/bot/server"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/logger"
-	"net/http"
 	"os"
 	"os/signal"
 	"strings"
@@ -85,11 +85,13 @@ func main() {
 	}
 	ratesClient := InitRates(ctx, db, repos)
 	services := service.NewService(repos, tgClient, ratesClient, kafkaProducer)
-	handlers := handler.NewHandler(services)
-
-	http.Handle("/metrics", promhttp.Handler())
+	handlers := telegram.NewHandler(services)
+	grpcHandlers := grpc.NewHandler(ctx, services)
 
 	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
+
+	// run telegram server
 	go func() {
 		if err = tgServer.Run(ctx, handlers); err != nil {
 			logger.Fatalf("error occured while running: %s", err.Error())
@@ -97,17 +99,38 @@ func main() {
 		}
 	}()
 
+	// run grpc server
+	grpcServer := server.NewGrpc(ctx, grpcHandlers)
 	go func() {
-		err = http.ListenAndServe(fmt.Sprintf(":%d", cfg.HttpPort), nil)
-		if err != nil {
-			logger.Fatalf("error starting http server", err.Error())
+		if err = grpcServer.Run(cfg.GrpcPort); err != nil {
+			logger.Info(err.Error())
+			quit <- nil
+		}
+	}()
+
+	// run rest server
+	restServer := server.NewRest(ctx)
+	go func() {
+		if err = restServer.Run(cfg.GrpcPort, cfg.RestPort); err != nil {
+			logger.Info(err.Error())
 			quit <- nil
 		}
 	}()
 
 	logger.Info("App Started")
-	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
-	<-quit
+
+	// graceful shutdown
+	logger.Info(fmt.Sprintf("Got signal %v, attempting graceful shutdown", <-quit))
+	stop()
+	logger.Info("Context is stopped")
+	grpcServer.GracefulStop()
+	logger.Info("gRPC graceful stopped")
+	err = restServer.Shutdown()
+	if err != nil {
+		logger.Info(fmt.Sprintf("error rest server shutdown: %s", err.Error()))
+	} else {
+		logger.Info("Rest server stopped")
+	}
 
 	logger.Info("App Shutting Down")
 }

@@ -15,7 +15,7 @@ import (
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/utilities"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/api/helloworld"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/api/report"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/grpclog"
@@ -32,8 +32,8 @@ var _ = runtime.String
 var _ = utilities.NewDoubleArray
 var _ = metadata.Join
 
-func request_Mnemosyne_SayHello_0(ctx context.Context, marshaler runtime.Marshaler, client MnemosyneClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq helloworld.HelloRequest
+func request_Spending_SendReport_0(ctx context.Context, marshaler runtime.Marshaler, client SpendingClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq report.Report
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -44,13 +44,13 @@ func request_Mnemosyne_SayHello_0(ctx context.Context, marshaler runtime.Marshal
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 
-	msg, err := client.SayHello(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	msg, err := client.SendReport(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
 
 }
 
-func local_request_Mnemosyne_SayHello_0(ctx context.Context, marshaler runtime.Marshaler, server MnemosyneServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq helloworld.HelloRequest
+func local_request_Spending_SendReport_0(ctx context.Context, marshaler runtime.Marshaler, server SpendingServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq report.Report
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -61,18 +61,18 @@ func local_request_Mnemosyne_SayHello_0(ctx context.Context, marshaler runtime.M
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 
-	msg, err := server.SayHello(ctx, &protoReq)
+	msg, err := server.SendReport(ctx, &protoReq)
 	return msg, metadata, err
 
 }
 
-// RegisterMnemosyneHandlerServer registers the http handlers for service Mnemosyne to "mux".
-// UnaryRPC     :call MnemosyneServer directly.
+// RegisterSpendingHandlerServer registers the http handlers for service Spending to "mux".
+// UnaryRPC     :call SpendingServer directly.
 // StreamingRPC :currently unsupported pending https://github.com/grpc/grpc-go/issues/906.
-// Note that using this registration option will cause many gRPC library features to stop working. Consider using RegisterMnemosyneHandlerFromEndpoint instead.
-func RegisterMnemosyneHandlerServer(ctx context.Context, mux *runtime.ServeMux, server MnemosyneServer) error {
+// Note that using this registration option will cause many gRPC library features to stop working. Consider using RegisterSpendingHandlerFromEndpoint instead.
+func RegisterSpendingHandlerServer(ctx context.Context, mux *runtime.ServeMux, server SpendingServer) error {
 
-	mux.Handle("POST", pattern_Mnemosyne_SayHello_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("POST", pattern_Spending_SendReport_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
@@ -80,12 +80,12 @@ func RegisterMnemosyneHandlerServer(ctx context.Context, mux *runtime.ServeMux, 
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/api.Mnemosyne/SayHello", runtime.WithHTTPPathPattern("/mnemosyne"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/api.Spending/SendReport", runtime.WithHTTPPathPattern("/send-report"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_Mnemosyne_SayHello_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_Spending_SendReport_0(annotatedContext, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
@@ -93,16 +93,16 @@ func RegisterMnemosyneHandlerServer(ctx context.Context, mux *runtime.ServeMux, 
 			return
 		}
 
-		forward_Mnemosyne_SayHello_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_Spending_SendReport_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
 	return nil
 }
 
-// RegisterMnemosyneHandlerFromEndpoint is same as RegisterMnemosyneHandler but
+// RegisterSpendingHandlerFromEndpoint is same as RegisterSpendingHandler but
 // automatically dials to "endpoint" and closes the connection when "ctx" gets done.
-func RegisterMnemosyneHandlerFromEndpoint(ctx context.Context, mux *runtime.ServeMux, endpoint string, opts []grpc.DialOption) (err error) {
+func RegisterSpendingHandlerFromEndpoint(ctx context.Context, mux *runtime.ServeMux, endpoint string, opts []grpc.DialOption) (err error) {
 	conn, err := grpc.Dial(endpoint, opts...)
 	if err != nil {
 		return err
@@ -122,41 +122,41 @@ func RegisterMnemosyneHandlerFromEndpoint(ctx context.Context, mux *runtime.Serv
 		}()
 	}()
 
-	return RegisterMnemosyneHandler(ctx, mux, conn)
+	return RegisterSpendingHandler(ctx, mux, conn)
 }
 
-// RegisterMnemosyneHandler registers the http handlers for service Mnemosyne to "mux".
+// RegisterSpendingHandler registers the http handlers for service Spending to "mux".
 // The handlers forward requests to the grpc endpoint over "conn".
-func RegisterMnemosyneHandler(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error {
-	return RegisterMnemosyneHandlerClient(ctx, mux, NewMnemosyneClient(conn))
+func RegisterSpendingHandler(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error {
+	return RegisterSpendingHandlerClient(ctx, mux, NewSpendingClient(conn))
 }
 
-// RegisterMnemosyneHandlerClient registers the http handlers for service Mnemosyne
-// to "mux". The handlers forward requests to the grpc endpoint over the given implementation of "MnemosyneClient".
-// Note: the gRPC framework executes interceptors within the gRPC handler. If the passed in "MnemosyneClient"
+// RegisterSpendingHandlerClient registers the http handlers for service Spending
+// to "mux". The handlers forward requests to the grpc endpoint over the given implementation of "SpendingClient".
+// Note: the gRPC framework executes interceptors within the gRPC handler. If the passed in "SpendingClient"
 // doesn't go through the normal gRPC flow (creating a gRPC client etc.) then it will be up to the passed in
-// "MnemosyneClient" to call the correct interceptors.
-func RegisterMnemosyneHandlerClient(ctx context.Context, mux *runtime.ServeMux, client MnemosyneClient) error {
+// "SpendingClient" to call the correct interceptors.
+func RegisterSpendingHandlerClient(ctx context.Context, mux *runtime.ServeMux, client SpendingClient) error {
 
-	mux.Handle("POST", pattern_Mnemosyne_SayHello_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("POST", pattern_Spending_SendReport_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/api.Mnemosyne/SayHello", runtime.WithHTTPPathPattern("/mnemosyne"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/api.Spending/SendReport", runtime.WithHTTPPathPattern("/send-report"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_Mnemosyne_SayHello_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_Spending_SendReport_0(annotatedContext, inboundMarshaler, client, req, pathParams)
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
 
-		forward_Mnemosyne_SayHello_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_Spending_SendReport_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
@@ -164,9 +164,9 @@ func RegisterMnemosyneHandlerClient(ctx context.Context, mux *runtime.ServeMux, 
 }
 
 var (
-	pattern_Mnemosyne_SayHello_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0}, []string{"mnemosyne"}, ""))
+	pattern_Spending_SendReport_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0}, []string{"send-report"}, ""))
 )
 
 var (
-	forward_Mnemosyne_SayHello_0 = runtime.ForwardResponseMessage
+	forward_Spending_SendReport_0 = runtime.ForwardResponseMessage
 )

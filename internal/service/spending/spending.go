@@ -423,7 +423,7 @@ func (s *Service) checkLimitPrice(ctx context.Context, category model.Category) 
 		f1 := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
 		f2 := time.Date(f1.Year(), f1.Month()+1, 0, 23, 59, 59, 0, f1.Location())
 
-		m, err := s.reposSpend.Report(ctx, f1, f2, s.rates)
+		m, err := s.reposSpend.Report(ctx, f1, f2, s.rates, uCurrency)
 		if err != nil {
 			return "", errors.Wrap(err, "check limit price report 31")
 		}

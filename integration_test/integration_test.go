@@ -12,7 +12,7 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/stretchr/testify/suite"
 	main "gitlab.ozon.dev/skubach/workshop-1-bot/cmd/bot"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/handler"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/handler/telegram"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/service"
@@ -34,7 +34,7 @@ type SpendingSuite struct {
 	ctx context.Context
 	cfg *configtest.ConfigTest
 	db  *sqlx.DB
-	hr  *handler.Handler
+	hr  *telegram.Handler
 }
 
 func (s *SpendingSuite) SetupSuite() {
@@ -59,7 +59,7 @@ func (s *SpendingSuite) SetupSuite() {
 	s.Require().NoError(err)
 	ratesClient := main.InitRates(s.ctx, s.db, repos)
 	services := service.NewService(repos, tgClient, ratesClient)
-	s.hr = handler.NewHandler(s.ctx, services)
+	s.hr = telegram.NewHandler(s.ctx, services)
 }
 
 func (s *SpendingSuite) TestCategoryAdd() {

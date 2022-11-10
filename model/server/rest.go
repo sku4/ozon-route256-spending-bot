@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/api"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/logger"
 	"google.golang.org/grpc"
@@ -33,7 +34,7 @@ func NewRest(ctx context.Context) *Rest {
 func (r *Rest) Run(grpcPort, restPort int) (err error) {
 	gwMux := runtime.NewServeMux()
 	opts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
-	err = api.RegisterMnemosyneHandlerFromEndpoint(r.ctx, gwMux,
+	err = api.RegisterSpendingHandlerFromEndpoint(r.ctx, gwMux,
 		fmt.Sprintf(":%d", grpcPort), opts)
 	if err != nil {
 		return errors.Wrap(err, "failed to register greeter handler")
@@ -42,6 +43,7 @@ func (r *Rest) Run(grpcPort, restPort int) (err error) {
 	// Serve the swagger-ui and swagger file
 	mux := http.NewServeMux()
 	mux.Handle("/", gwMux)
+	mux.Handle("/metrics", promhttp.Handler())
 	handleSwaggerFile(mux)
 
 	// Register Swagger Handler

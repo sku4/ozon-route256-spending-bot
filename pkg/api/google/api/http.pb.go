@@ -99,29 +99,30 @@ func (x *Http) GetRules() []*HttpRule {
 // message, as in the example below which describes a REST GET
 // operation on a resource collection of messages:
 //
-//	service Messaging {
-//	  rpc GetMessage(GetMessageRequest) returns (Message) {
-//	    option (google.api.http).get = "/v1/messages/{message_id}/{sub.subfield}";
-//	  }
-//	}
-//	message GetMessageRequest {
-//	  message SubMessage {
-//	    string subfield = 1;
-//	  }
-//	  string message_id = 1; // mapped to the URL
-//	  SubMessage sub = 2;    // `sub.subfield` is url-mapped
-//	}
-//	message Message {
-//	  string text = 1; // content of the resource
-//	}
+//
+//     service Messaging {
+//       rpc GetMessage(GetMessageRequest) returns (Message) {
+//         option (google.api.http).get = "/v1/messages/{message_id}/{sub.subfield}";
+//       }
+//     }
+//     message GetMessageRequest {
+//       message SubMessage {
+//         string subfield = 1;
+//       }
+//       string message_id = 1; // mapped to the URL
+//       SubMessage sub = 2;    // `sub.subfield` is url-mapped
+//     }
+//     message Message {
+//       string text = 1; // content of the resource
+//     }
 //
 // The same http annotation can alternatively be expressed inside the
 // `GRPC API Configuration` YAML file.
 //
-//	http:
-//	  rules:
-//	    - selector: <proto_package_name>.Messaging.GetMessage
-//	      get: /v1/messages/{message_id}/{sub.subfield}
+//     http:
+//       rules:
+//         - selector: <proto_package_name>.Messaging.GetMessage
+//           get: /v1/messages/{message_id}/{sub.subfield}
 //
 // This definition enables an automatic, bidrectional mapping of HTTP
 // JSON to RPC. Example:
@@ -138,14 +139,16 @@ func (x *Http) GetRules() []*HttpRule {
 // pattern automatically become (optional) HTTP query
 // parameters. Assume the following definition of the request message:
 //
-//	message GetMessageRequest {
-//	  message SubMessage {
-//	    string subfield = 1;
-//	  }
-//	  string message_id = 1; // mapped to the URL
-//	  int64 revision = 2;    // becomes a parameter
-//	  SubMessage sub = 3;    // `sub.subfield` becomes a parameter
-//	}
+//
+//     message GetMessageRequest {
+//       message SubMessage {
+//         string subfield = 1;
+//       }
+//       string message_id = 1; // mapped to the URL
+//       int64 revision = 2;    // becomes a parameter
+//       SubMessage sub = 3;    // `sub.subfield` becomes a parameter
+//     }
+//
 //
 // This enables a HTTP JSON to RPC mapping as below:
 //
@@ -162,18 +165,20 @@ func (x *Http) GetRules() []*HttpRule {
 // specifies the mapping. Consider a REST update method on the
 // message resource collection:
 //
-//	service Messaging {
-//	  rpc UpdateMessage(UpdateMessageRequest) returns (Message) {
-//	    option (google.api.http) = {
-//	      put: "/v1/messages/{message_id}"
-//	      body: "message"
-//	    };
-//	  }
-//	}
-//	message UpdateMessageRequest {
-//	  string message_id = 1; // mapped to the URL
-//	  Message message = 2;   // mapped to the body
-//	}
+//
+//     service Messaging {
+//       rpc UpdateMessage(UpdateMessageRequest) returns (Message) {
+//         option (google.api.http) = {
+//           put: "/v1/messages/{message_id}"
+//           body: "message"
+//         };
+//       }
+//     }
+//     message UpdateMessageRequest {
+//       string message_id = 1; // mapped to the URL
+//       Message message = 2;   // mapped to the body
+//     }
+//
 //
 // The following HTTP JSON to RPC mapping is enabled, where the
 // representation of the JSON in the request body is determined by
@@ -188,18 +193,19 @@ func (x *Http) GetRules() []*HttpRule {
 // request body.  This enables the following alternative definition of
 // the update method:
 //
-//	service Messaging {
-//	  rpc UpdateMessage(Message) returns (Message) {
-//	    option (google.api.http) = {
-//	      put: "/v1/messages/{message_id}"
-//	      body: "*"
-//	    };
-//	  }
-//	}
-//	message Message {
-//	  string message_id = 1;
-//	  string text = 2;
-//	}
+//     service Messaging {
+//       rpc UpdateMessage(Message) returns (Message) {
+//         option (google.api.http) = {
+//           put: "/v1/messages/{message_id}"
+//           body: "*"
+//         };
+//       }
+//     }
+//     message Message {
+//       string message_id = 1;
+//       string text = 2;
+//     }
+//
 //
 // The following HTTP JSON to RPC mapping is enabled:
 //
@@ -216,20 +222,21 @@ func (x *Http) GetRules() []*HttpRule {
 // It is possible to define multiple HTTP methods for one RPC by using
 // the `additional_bindings` option. Example:
 //
-//	service Messaging {
-//	  rpc GetMessage(GetMessageRequest) returns (Message) {
-//	    option (google.api.http) = {
-//	      get: "/v1/messages/{message_id}"
-//	      additional_bindings {
-//	        get: "/v1/users/{user_id}/messages/{message_id}"
-//	      }
-//	    };
-//	  }
-//	}
-//	message GetMessageRequest {
-//	  string message_id = 1;
-//	  string user_id = 2;
-//	}
+//     service Messaging {
+//       rpc GetMessage(GetMessageRequest) returns (Message) {
+//         option (google.api.http) = {
+//           get: "/v1/messages/{message_id}"
+//           additional_bindings {
+//             get: "/v1/users/{user_id}/messages/{message_id}"
+//           }
+//         };
+//       }
+//     }
+//     message GetMessageRequest {
+//       string message_id = 1;
+//       string user_id = 2;
+//     }
+//
 //
 // This enables the following two alternative HTTP JSON to RPC
 // mappings:
@@ -244,25 +251,25 @@ func (x *Http) GetRules() []*HttpRule {
 // The rules for mapping HTTP path, query parameters, and body fields
 // to the request message are as follows:
 //
-//  1. The `body` field specifies either `*` or a field path, or is
-//     omitted. If omitted, it assumes there is no HTTP body.
-//  2. Leaf fields (recursive expansion of nested messages in the
-//     request) can be classified into three types:
+// 1. The `body` field specifies either `*` or a field path, or is
+//    omitted. If omitted, it assumes there is no HTTP body.
+// 2. Leaf fields (recursive expansion of nested messages in the
+//    request) can be classified into three types:
 //     (a) Matched in the URL template.
 //     (b) Covered by body (if body is `*`, everything except (a) fields;
-//     else everything under the body field)
+//         else everything under the body field)
 //     (c) All other fields.
-//  3. URL query parameters found in the HTTP request are mapped to (c) fields.
-//  4. Any body sent with an HTTP request can contain only (b) fields.
+// 3. URL query parameters found in the HTTP request are mapped to (c) fields.
+// 4. Any body sent with an HTTP request can contain only (b) fields.
 //
 // The syntax of the path template is as follows:
 //
-//	Template = "/" Segments [ Verb ] ;
-//	Segments = Segment { "/" Segment } ;
-//	Segment  = "*" | "**" | LITERAL | Variable ;
-//	Variable = "{" FieldPath [ "=" Segments ] "}" ;
-//	FieldPath = IDENT { "." IDENT } ;
-//	Verb     = ":" LITERAL ;
+//     Template = "/" Segments [ Verb ] ;
+//     Segments = Segment { "/" Segment } ;
+//     Segment  = "*" | "**" | LITERAL | Variable ;
+//     Variable = "{" FieldPath [ "=" Segments ] "}" ;
+//     FieldPath = IDENT { "." IDENT } ;
+//     Verb     = ":" LITERAL ;
 //
 // The syntax `*` matches a single path segment. It follows the semantics of
 // [RFC 6570](https://tools.ietf.org/html/rfc6570) Section 3.2.2 Simple String

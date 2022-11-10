@@ -4,28 +4,24 @@ import (
 	"context"
 	"fmt"
 	"github.com/Shopify/sarama"
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/jmoiron/sqlx"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	"github.com/pkg/errors"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-	jaeger "github.com/uber/jaeger-client-go/config"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/configs"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/handler"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/handler/consumer"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/rates"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/rates/nbrb"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/service"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/model/kafka"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/model/telegram/bot/client"
-	tg "gitlab.ozon.dev/skubach/workshop-1-bot/model/telegram/bot/server"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/api"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/logger"
-	"net/http"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 )
 
@@ -35,21 +31,11 @@ func main() {
 		logger.Fatalf("error init config: %s", err.Error())
 	}
 
-	err = initTracing(cfg)
-	if err != nil {
-		logger.Fatalf("error init tracing: %s", err.Error())
-	}
-
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer func() {
 		stop()
 		logger.Info("Context is stopped")
 	}()
-
-	tgClient, tgServer, err := InitTelegramBot(ctx, cfg)
-	if err != nil {
-		logger.Fatalf("error init telegram bot: %s", err.Error())
-	}
 
 	if err = godotenv.Load(); err != nil {
 		logger.Fatalf("error loading env variables: %s", err.Error())
@@ -67,71 +53,76 @@ func main() {
 		logger.Fatalf("failed to initialize db: %s", err.Error())
 	}
 
-	logger.Info(fmt.Sprintf("Kafka brokers: %s", strings.Join(kafka.BrokersList, ", ")))
-	kafkaProducer, err := initKafkaProducer(kafka.BrokersList)
-	if err != nil {
-		logger.Fatalf("failed init kafka: %s", err.Error())
-	}
-	defer func() {
-		err = kafkaProducer.Close()
-		if err != nil {
-			logger.Info(fmt.Sprintf("failed to close producer: %s", err.Error()))
-		}
-	}()
-
 	repos, err := repository.NewRepository(db)
 	if err != nil {
 		logger.Fatalf("failed init repository: %s", err.Error())
 	}
-	ratesClient := InitRates(ctx, db, repos)
-	services := service.NewService(repos, tgClient, ratesClient, kafkaProducer)
-	handlers := handler.NewHandler(services)
+	ratesClient := initRates(ctx, db, repos)
 
-	http.Handle("/metrics", promhttp.Handler())
+	grpcConn, err := initGrpcConn(cfg)
+	if err != nil {
+		logger.Fatalf("failed init grpc client: %s", err.Error())
+	}
+	defer func() {
+		err = grpcConn.Close()
+		if err != nil {
+			logger.Info(fmt.Sprintf("Unrecognized consumer group partition assignor: %s", kafka.Assignor))
+		}
+		logger.Info("grpc client connection closed")
+	}()
+	grpcClient := api.NewSpendingClient(grpcConn)
+
+	services := service.NewReportService(repos, ratesClient, grpcClient)
+	consumerGroupHandler := consumer.NewConsumer(services)
 
 	quit := make(chan os.Signal, 1)
-	go func() {
-		if err = tgServer.Run(ctx, handlers); err != nil {
-			logger.Fatalf("error occured while running: %s", err.Error())
-			quit <- nil
-		}
-	}()
+	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
 
 	go func() {
-		err = http.ListenAndServe(fmt.Sprintf(":%d", cfg.HttpPort), nil)
-		if err != nil {
-			logger.Fatalf("error starting http server", err.Error())
-			quit <- nil
+		if err = startConsumerGroup(ctx, consumerGroupHandler); err != nil {
+			logger.Fatalf("error start consumer group: %s", err.Error())
 		}
 	}()
 
 	logger.Info("App Started")
-	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
-	<-quit
+
+	// graceful shutdown
+	logger.Info(fmt.Sprintf("Got signal %v, attempting graceful shutdown", <-quit))
 
 	logger.Info("App Shutting Down")
 }
 
-func InitTelegramBot(ctx context.Context, cfg *configs.Config) (tgClient *client.Client, tgServer *tg.Server, err error) {
-	tgBot, err := tgbotapi.NewBotAPI(cfg.TelegramBotToken)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "error init telegram bot")
+func startConsumerGroup(ctx context.Context, consumerGroupHandler *consumer.Consumer) error {
+	config := sarama.NewConfig()
+	config.Version = sarama.V3_2_3_0
+	config.Consumer.Offsets.Initial = sarama.OffsetOldest
+
+	switch kafka.Assignor {
+	case "sticky":
+		config.Consumer.Group.Rebalance.GroupStrategies = []sarama.BalanceStrategy{sarama.BalanceStrategySticky}
+	case "round-robin":
+		config.Consumer.Group.Rebalance.GroupStrategies = []sarama.BalanceStrategy{sarama.BalanceStrategyRoundRobin}
+	case "range":
+		config.Consumer.Group.Rebalance.GroupStrategies = []sarama.BalanceStrategy{sarama.BalanceStrategyRange}
+	default:
+		logger.Fatalf("Unrecognized consumer group partition assignor: %s", kafka.Assignor)
 	}
 
-	tgClient, err = client.NewClient(ctx, tgBot)
+	// Create consumer group
+	consumerGroup, err := sarama.NewConsumerGroup(kafka.BrokersList, kafka.ConsumerGroup, config)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "telegram client init failed")
+		return fmt.Errorf("starting consumer group: %w", err)
 	}
 
-	tgServer, err = tg.NewServer(ctx, tgBot)
+	err = consumerGroup.Consume(ctx, []string{kafka.TopicReport}, consumerGroupHandler)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "telegram server init failed")
+		return fmt.Errorf("consuming via handler: %w", err)
 	}
 
-	return
+	return nil
 }
 
-func InitRates(ctx context.Context, db *sqlx.DB, repos *repository.Repository) rates.Client {
+func initRates(ctx context.Context, db *sqlx.DB, repos *repository.Repository) rates.Client {
 	ratesClient := nbrb.NewRates(db, repos.CurrencyClient)
 	run := ratesClient.UpdateRatesSync(ctx)
 
@@ -145,35 +136,11 @@ func InitRates(ctx context.Context, db *sqlx.DB, repos *repository.Repository) r
 	return ratesClient
 }
 
-func initTracing(cfg *configs.Config) (err error) {
-	c := jaeger.Configuration{
-		Sampler: &jaeger.SamplerConfig{
-			Type:  "const",
-			Param: 1,
-		},
+func initGrpcConn(cfg *configs.Config) (conn *grpc.ClientConn, err error) {
+	conn, err = grpc.Dial(fmt.Sprintf("localhost:%d", cfg.GrpcPort), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return nil, errors.Wrap(err, "did not connect")
 	}
-	_, err = c.InitGlobalTracer(cfg.ServiceName)
 
 	return
-}
-
-func initKafkaProducer(brokerList []string) (sarama.AsyncProducer, error) {
-	config := sarama.NewConfig()
-	config.Version = sarama.V3_2_3_0
-	// So we can know the partition and offset of messages.
-	config.Producer.Return.Successes = true
-
-	producer, err := sarama.NewAsyncProducer(brokerList, config)
-	if err != nil {
-		return nil, fmt.Errorf("starting Sarama producer: %w", err)
-	}
-
-	// We will log to STDOUT if we're not able to produce messages.
-	go func() {
-		for err = range producer.Errors() {
-			logger.Infos("Failed to write message:", err)
-		}
-	}()
-
-	return producer, nil
 }

@@ -3,7 +3,7 @@ package server
 import (
 	"context"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/handler"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/handler/telegram"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/logger"
 )
 
@@ -19,7 +19,7 @@ func NewServer(ctx context.Context, client *tgbotapi.BotAPI) (*Server, error) {
 	}, nil
 }
 
-func (s *Server) Run(ctx context.Context, h handler.IHandler) error {
+func (s *Server) Run(ctx context.Context, h telegram.IHandler) error {
 	h = MetricsMiddleware(h)
 	h = TracingMiddleware(h)
 
