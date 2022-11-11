@@ -60,7 +60,7 @@
     "apiEmpty": {
       "type": "object"
     },
-    "apiTimestamp": {
+    "googleapiTimestamp": {
       "type": "object",
       "properties": {
         "seconds": {
@@ -102,10 +102,10 @@
       "type": "object",
       "properties": {
         "f1": {
-          "$ref": "#/definitions/apiTimestamp"
+          "$ref": "#/definitions/googleapiTimestamp"
         },
         "f2": {
-          "$ref": "#/definitions/apiTimestamp"
+          "$ref": "#/definitions/googleapiTimestamp"
         },
         "chatId": {
           "type": "string",

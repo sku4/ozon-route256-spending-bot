@@ -4,6 +4,7 @@ go 1.19
 
 require (
 	github.com/Shopify/sarama v1.37.2
+	github.com/envoyproxy/protoc-gen-validate v0.1.0
 	github.com/go-redis/cache/v8 v8.4.3
 	github.com/go-redis/redis/v8 v8.11.3
 	github.com/go-telegram-bot-api/telegram-bot-api v4.6.4+incompatible
