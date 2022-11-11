@@ -111,7 +111,7 @@ func main() {
 	// run rest server
 	restServer := server.NewRest(ctx)
 	go func() {
-		if err = restServer.Run(os.Getenv("GRPC_URL"), cfg.RestPort); err != nil {
+		if err = restServer.Run(os.Getenv("GRPC_URL"), cfg.BotRestPort); err != nil {
 			logger.Info(err.Error())
 			quit <- nil
 		}

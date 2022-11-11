@@ -2,17 +2,20 @@ package consumer
 
 import (
 	"github.com/Shopify/sarama"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/handler/consumer"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/service"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/logger"
 )
 
 type Consumer struct {
-	services service.ReportService
+	handler consumer.IHandler
 }
 
 func NewConsumer(services *service.ReportService) *Consumer {
+	h := consumer.NewHandler(services)
+	h = MetricsMiddleware(h)
 	return &Consumer{
-		services: *services,
+		handler: h,
 	}
 }
 
@@ -31,7 +34,7 @@ func (c *Consumer) Cleanup(sarama.ConsumerGroupSession) error {
 // ConsumeClaim must start a consumer loop of ConsumerGroupClaim's Messages().
 func (c *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
 	for message := range claim.Messages() {
-		c.ReportMessage(session.Context(), message)
+		_ = c.handler.ReportMessage(session.Context(), message)
 		session.MarkMessage(message, "")
 	}
 

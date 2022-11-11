@@ -8,7 +8,8 @@ import (
 type Config struct {
 	TelegramBotToken string `mapstructure:"TelegramBotToken"`
 	ServiceName      string `mapstructure:"ServiceName"`
-	RestPort         int    `mapstructure:"restPort"`
+	BotRestPort      int    `mapstructure:"botRestPort"`
+	ReportRestPort   int    `mapstructure:"reportRestPort"`
 }
 
 func Init() (*Config, error) {

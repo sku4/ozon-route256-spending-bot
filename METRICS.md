@@ -14,3 +14,13 @@ Avg price by category "Auto" events:
 
 Effective use cache for reports:
 ```sum(cache_total{key="report",from_cache="1"}) * 100 / sum(cache_total{key="report"})```
+
+Statistic requests report by period:
+```sum(report_total{days="365"}) * 100 / sum(report_total)```
+```sum(report_total{days="30"}) * 100 / sum(report_total)```
+```sum(report_total{days="7"}) * 100 / sum(report_total)```
+
+Response time quantiles by report worker:
+```histogram_quantile(0.5, sum(rate(report_http_histogram_response_time_milliseconds_bucket[10s])) by (le, cmd))```
+```histogram_quantile(0.9, sum(rate(report_http_histogram_response_time_milliseconds_bucket[10s])) by (le, cmd))```
+```histogram_quantile(0.99, sum(rate(report_http_histogram_response_time_milliseconds_bucket[10s])) by (le, cmd))```

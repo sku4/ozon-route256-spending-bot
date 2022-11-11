@@ -8,17 +8,20 @@ import (
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	"github.com/pkg/errors"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/handler/consumer"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/configs"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/rates"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/rates/nbrb"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/service"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/model/consumer"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/model/kafka"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/api"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/logger"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"net/http"
 	"os"
 	"os/signal"
 	"strings"
@@ -26,6 +29,11 @@ import (
 )
 
 func main() {
+	cfg, err := configs.Init()
+	if err != nil {
+		logger.Fatalf("error init config: %s", err.Error())
+	}
+
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer func() {
 		stop()
@@ -70,12 +78,23 @@ func main() {
 	services := service.NewReportService(repos, ratesClient, grpcClient)
 	consumerGroupHandler := consumer.NewConsumer(services)
 
+	http.Handle("/metrics", promhttp.Handler())
+
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
 
 	go func() {
 		if err = startConsumerGroup(ctx, consumerGroupHandler); err != nil {
 			logger.Fatalf("error start consumer group: %s", err.Error())
+		}
+	}()
+
+	go func() {
+		logger.Info(fmt.Sprintf("Rest server is running on: %d", cfg.ReportRestPort))
+		err = http.ListenAndServe(fmt.Sprintf(":%d", cfg.ReportRestPort), nil)
+		if err != nil {
+			logger.Fatalf("error starting http server", err.Error())
+			quit <- nil
 		}
 	}()
 

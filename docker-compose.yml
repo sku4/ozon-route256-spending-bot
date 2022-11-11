@@ -58,6 +58,8 @@ services:
       - REDIS_PASSWORD=redis
       - KAFKA_URL=kafka:9092
       - GRPC_URL=app:50051
+    ports:
+      - "8090:8090"
 
   db:
     image: postgres:14.5

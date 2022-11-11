@@ -15,3 +15,7 @@ scrape_configs:
     static_configs:
       - targets:
         - "host.docker.internal:8080"
+  - job_name: "spending-report"
+    static_configs:
+      - targets:
+        - "host.docker.internal:8090"

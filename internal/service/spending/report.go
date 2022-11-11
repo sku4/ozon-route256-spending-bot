@@ -7,6 +7,8 @@ import (
 	"github.com/Shopify/sarama"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/rates"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/model"
@@ -20,6 +22,15 @@ import (
 )
 
 //go:generate mockgen -source=report.go -destination=mocks/report.go
+
+var (
+	reportTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "report_total",
+		},
+		[]string{"days"},
+	)
+)
 
 type Report struct {
 	reposSpend repository.Spending
@@ -154,6 +165,8 @@ func (s *Service) buildReport(ctx context.Context, update tgbotapi.Update, f1, f
 	}
 
 	s.kafkaProducer.Input() <- &msgReport
+
+	reportTotal.WithLabelValues(fmt.Sprintf("%.0f", f2.Sub(f1).Hours()/24)).Inc()
 
 	return nil
 }
