@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package report;
 import "protoc-gen-openapiv2/options/annotations.proto";
-import "google/api/timestamp.proto";
+import "google/protobuf/timestamp.proto";
 import "validate/validate.proto";
 option go_package = "gitlab.ozon.dev/skubach/workshop-1-bot/pkg/api/report";
 
@@ -13,8 +13,8 @@ message Report {
       title: "ReportRequest json schema"
     }
   };
-  google.api.Timestamp f1 = 1 [(validate.rules).timestamp.required = true];
-  google.api.Timestamp f2 = 2 [(validate.rules).timestamp.required = true];
+  google.protobuf.Timestamp f1 = 1 [(validate.rules).timestamp.required = true];
+  google.protobuf.Timestamp f2 = 2 [(validate.rules).timestamp.required = true];
   int64 chatId = 3;
   Currency userCurrency = 4;
   string message = 5;
