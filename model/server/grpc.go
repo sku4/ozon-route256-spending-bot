@@ -3,8 +3,10 @@ package server
 import (
 	"context"
 	"fmt"
+	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	"github.com/pkg/errors"
 	hgrpc "gitlab.ozon.dev/skubach/workshop-1-bot/internal/handler/grpc"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/model/server/interceptors"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/api"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/logger"
 	"google.golang.org/grpc"
@@ -22,11 +24,11 @@ type Grpc struct {
 func NewGrpc(ctx context.Context, handler *hgrpc.Handler) *Grpc {
 	return &Grpc{
 		ctx: ctx,
-		// grpc middleware
+		// grpc middleware metrics
 		grpcService: grpc.NewServer(
-		/*grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
-			grpc_auth.UnaryServerInterceptor(handler.Auth),
-		)),*/
+			grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
+				interceptors.UnaryServerInterceptor(handler.Metrics),
+			)),
 		),
 		handler: handler,
 	}

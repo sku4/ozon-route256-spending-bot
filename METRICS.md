@@ -24,3 +24,6 @@ Response time quantiles by report worker:
 ```histogram_quantile(0.5, sum(rate(report_http_histogram_response_time_milliseconds_bucket[10s])) by (le, cmd))```
 ```histogram_quantile(0.9, sum(rate(report_http_histogram_response_time_milliseconds_bucket[10s])) by (le, cmd))```
 ```histogram_quantile(0.99, sum(rate(report_http_histogram_response_time_milliseconds_bucket[10s])) by (le, cmd))```
+
+Statistic grpc requests by method name:
+```sum(bot_grpc_total{method="/api.Spending/SendReport"}) * 100 / sum(bot_grpc_total)```
