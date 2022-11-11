@@ -1,0 +1,19 @@
+FROM golang:1.19.2-alpine3.16 AS builder
+
+RUN go version
+
+COPY . /workshop-1-report/
+WORKDIR /workshop-1-report/
+
+RUN go mod download
+RUN GOOS=linux go build -o ./.bin/report ./cmd/report/main.go
+
+FROM alpine:latest
+
+WORKDIR /app
+
+COPY --from=builder /workshop-1-report/.bin/report .
+COPY --from=builder /workshop-1-report/configs/config.yml configs/config.yml
+RUN touch .env
+
+CMD /app/report

@@ -1,7 +1,6 @@
 package kafka
 
 import (
-	"fmt"
 	"github.com/joho/godotenv"
 	"os"
 )
@@ -15,6 +14,5 @@ var (
 
 func init() {
 	_ = godotenv.Load()
-	kafkaPort := os.Getenv("KAFKA_ADVERTISED_PORT")
-	BrokersList = append(BrokersList, fmt.Sprintf("localhost:%s", kafkaPort))
+	BrokersList = append(BrokersList, os.Getenv("KAFKA_URL"))
 }

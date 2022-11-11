@@ -3,12 +3,15 @@ version: '3.8'
 services:
   app-bot:
     image: "spending/bot"
+    hostname: app
     restart: always
     build:
       context: ./
       dockerfile: Dockerfile
     depends_on:
       cache:
+        condition: service_started
+      kafka:
         condition: service_started
       db:
         condition: service_healthy
@@ -22,6 +25,39 @@ services:
       - REDIS_HOST=cache
       - REDIS_PORT=6379
       - REDIS_PASSWORD=redis
+      - KAFKA_URL=kafka:9092
+      - GRPC_URL=app:50051
+    ports:
+      - "8080:8080"
+      - "50051:50051"
+
+  app-report:
+    image: "spending/report"
+    restart: always
+    build:
+      context: ./
+      dockerfile: Dockerfile-report
+    depends_on:
+      cache:
+        condition: service_started
+      kafka:
+        condition: service_started
+      db:
+        condition: service_healthy
+      app-bot:
+        condition: service_started
+    environment:
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB_NAME=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_SSL=disable
+      - REDIS_HOST=cache
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=redis
+      - KAFKA_URL=kafka:9092
+      - GRPC_URL=app:50051
 
   db:
     image: postgres:14.5
@@ -89,10 +125,10 @@ services:
     links:
       - zookeeper
     environment:
-      KAFKA_ADVERTISED_HOST_NAME: "127.0.0.1"
+      KAFKA_ADVERTISED_HOST_NAME: "kafka"
       KAFKA_ADVERTISED_PORT: "9092"
       KAFKA_ZOOKEEPER_CONNECT: "zookeeper:2181"
-      KAFKA_CREATE_TOPICS: "report:1:1"
+      KAFKA_CREATE_TOPICS: "report:2:1"
     depends_on:
       - zookeeper
 

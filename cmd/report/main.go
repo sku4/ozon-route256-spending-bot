@@ -8,7 +8,6 @@ import (
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	"github.com/pkg/errors"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/configs"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/handler/consumer"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres"
@@ -22,22 +21,18 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 )
 
 func main() {
-	cfg, err := configs.Init()
-	if err != nil {
-		logger.Fatalf("error init config: %s", err.Error())
-	}
-
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer func() {
 		stop()
 		logger.Info("Context is stopped")
 	}()
 
-	if err = godotenv.Load(); err != nil {
+	if err := godotenv.Load(); err != nil {
 		logger.Fatalf("error loading env variables: %s", err.Error())
 	}
 
@@ -59,7 +54,7 @@ func main() {
 	}
 	ratesClient := initRates(ctx, db, repos)
 
-	grpcConn, err := initGrpcConn(cfg)
+	grpcConn, err := initGrpcConn(os.Getenv("GRPC_URL"))
 	if err != nil {
 		logger.Fatalf("failed init grpc client: %s", err.Error())
 	}
@@ -108,6 +103,8 @@ func startConsumerGroup(ctx context.Context, consumerGroupHandler *consumer.Cons
 		logger.Fatalf("Unrecognized consumer group partition assignor: %s", kafka.Assignor)
 	}
 
+	logger.Info(fmt.Sprintf("Kafka brokers: %s", strings.Join(kafka.BrokersList, ", ")))
+
 	// Create consumer group
 	consumerGroup, err := sarama.NewConsumerGroup(kafka.BrokersList, kafka.ConsumerGroup, config)
 	if err != nil {
@@ -136,8 +133,8 @@ func initRates(ctx context.Context, db *sqlx.DB, repos *repository.Repository) r
 	return ratesClient
 }
 
-func initGrpcConn(cfg *configs.Config) (conn *grpc.ClientConn, err error) {
-	conn, err = grpc.Dial(fmt.Sprintf("localhost:%d", cfg.GrpcPort), grpc.WithTransportCredentials(insecure.NewCredentials()))
+func initGrpcConn(grpcUrl string) (conn *grpc.ClientConn, err error) {
+	conn, err = grpc.Dial(grpcUrl, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, errors.Wrap(err, "did not connect")
 	}

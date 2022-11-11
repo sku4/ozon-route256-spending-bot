@@ -9,7 +9,6 @@ type Config struct {
 	TelegramBotToken string `mapstructure:"TelegramBotToken"`
 	ServiceName      string `mapstructure:"ServiceName"`
 	RestPort         int    `mapstructure:"restPort"`
-	GrpcPort         int    `mapstructure:"grpcPort"`
 }
 
 func Init() (*Config, error) {

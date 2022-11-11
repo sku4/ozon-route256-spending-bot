@@ -15,6 +15,7 @@ FROM alpine:latest
 WORKDIR /app
 
 COPY --from=builder /workshop-1-bot/.bin/bot .
+COPY --from=builder /workshop-1-bot/swagger swagger/
 COPY --from=builder /workshop-1-bot/configs/config.yml configs/config.yml
 RUN touch .env
 

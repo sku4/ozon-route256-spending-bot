@@ -25,7 +25,8 @@ POSTGRES_SSL=disable
 REDIS_HOST=localhost
 REDIS_PORT=6379
 REDIS_PASSWORD=redis
-KAFKA_ADVERTISED_PORT=9092
+KAFKA_URL=localhost:9092
+GRPC_URL=localhost:50051
 ```
 ## Available commands:
 - /categories
@@ -66,3 +67,6 @@ Jaeger: http://localhost:16686/
 ## Build protobuf
 
 Use ```make buf``` to build protobuf files
+
+## See swagger for API endpoints
+http://localhost:8080/swagger/

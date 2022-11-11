@@ -31,11 +31,10 @@ func NewRest(ctx context.Context) *Rest {
 }
 
 // Run rest server with handle swagger
-func (r *Rest) Run(grpcPort, restPort int) (err error) {
+func (r *Rest) Run(grpcUrl string, restPort int) (err error) {
 	gwMux := runtime.NewServeMux()
 	opts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
-	err = api.RegisterSpendingHandlerFromEndpoint(r.ctx, gwMux,
-		fmt.Sprintf(":%d", grpcPort), opts)
+	err = api.RegisterSpendingHandlerFromEndpoint(r.ctx, gwMux, grpcUrl, opts)
 	if err != nil {
 		return errors.Wrap(err, "failed to register greeter handler")
 	}

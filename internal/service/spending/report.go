@@ -71,6 +71,8 @@ func (r *Report) Build(ctx context.Context, f1, f2 time.Time, userCurr model.Cur
 		return errors.Wrap(err, "could not greet build")
 	}
 
+	logger.Infos("report success sent:", report, f1, f2)
+
 	return
 }
 
@@ -152,8 +154,6 @@ func (s *Service) buildReport(ctx context.Context, update tgbotapi.Update, f1, f
 	}
 
 	s.kafkaProducer.Input() <- &msgReport
-	successMsg := <-s.kafkaProducer.Successes()
-	logger.Infos("Successful to write message, offset:", successMsg.Offset)
 
 	return nil
 }
@@ -173,6 +173,8 @@ func (s *Service) SendReport(ctx context.Context, report string, f1, f2 time.Tim
 	if err != nil {
 		return err
 	}
+
+	logger.Infos("report sent to telegram:", r, chatId)
 
 	return nil
 }

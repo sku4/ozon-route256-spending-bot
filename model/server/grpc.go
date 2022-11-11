@@ -33,13 +33,13 @@ func NewGrpc(ctx context.Context, handler *hgrpc.Handler) *Grpc {
 }
 
 // Run grpc on port with handler
-func (g *Grpc) Run(port int) (err error) {
+func (g *Grpc) Run(grpcUrl string) (err error) {
 	api.RegisterSpendingServer(g.grpcService, g.handler)
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+	lis, err := net.Listen("tcp", grpcUrl)
 	if err != nil {
 		return errors.Wrap(err, "failed to listen")
 	}
-	logger.Info(fmt.Sprintf("gRPC server is listening on: %d", port))
+	logger.Info(fmt.Sprintf("gRPC server is listening on %s", grpcUrl))
 	reflection.Register(g.grpcService)
 	if err = g.grpcService.Serve(lis); err != nil {
 		return errors.Wrap(err, "failed to serve")

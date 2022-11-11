@@ -68,7 +68,7 @@ func main() {
 	}
 
 	logger.Info(fmt.Sprintf("Kafka brokers: %s", strings.Join(kafka.BrokersList, ", ")))
-	kafkaProducer, err := initKafkaProducer(kafka.BrokersList)
+	kafkaProducer, err := initKafkaProducer(ctx, kafka.BrokersList)
 	if err != nil {
 		logger.Fatalf("failed init kafka: %s", err.Error())
 	}
@@ -102,7 +102,7 @@ func main() {
 	// run grpc server
 	grpcServer := server.NewGrpc(ctx, grpcHandlers)
 	go func() {
-		if err = grpcServer.Run(cfg.GrpcPort); err != nil {
+		if err = grpcServer.Run(os.Getenv("GRPC_URL")); err != nil {
 			logger.Info(err.Error())
 			quit <- nil
 		}
@@ -111,7 +111,7 @@ func main() {
 	// run rest server
 	restServer := server.NewRest(ctx)
 	go func() {
-		if err = restServer.Run(cfg.GrpcPort, cfg.RestPort); err != nil {
+		if err = restServer.Run(os.Getenv("GRPC_URL"), cfg.RestPort); err != nil {
 			logger.Info(err.Error())
 			quit <- nil
 		}
@@ -180,7 +180,7 @@ func initTracing(cfg *configs.Config) (err error) {
 	return
 }
 
-func initKafkaProducer(brokerList []string) (sarama.AsyncProducer, error) {
+func initKafkaProducer(ctx context.Context, brokerList []string) (sarama.AsyncProducer, error) {
 	config := sarama.NewConfig()
 	config.Version = sarama.V3_2_3_0
 	// So we can know the partition and offset of messages.
@@ -193,8 +193,15 @@ func initKafkaProducer(brokerList []string) (sarama.AsyncProducer, error) {
 
 	// We will log to STDOUT if we're not able to produce messages.
 	go func() {
-		for err = range producer.Errors() {
-			logger.Infos("Failed to write message:", err)
+		for {
+			select {
+			case err := <-producer.Errors():
+				logger.Infos("Failed to write message:", err)
+			case successMsg := <-producer.Successes():
+				logger.Infos("Successful to write message, offset:", successMsg.Offset)
+			case <-ctx.Done():
+				return
+			}
 		}
 	}()
 
