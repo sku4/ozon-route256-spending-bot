@@ -6,6 +6,9 @@ Example config file ```configs/config.yml```:
 
 ```yaml
 TelegramBotToken: "<token>"
+ServiceName: "spending-bot"
+botRestPort: 8080
+reportRestPort: 8090
 
 Test:
   Telegram:
