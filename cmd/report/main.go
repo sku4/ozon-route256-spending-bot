@@ -114,7 +114,8 @@ func startConsumerGroup(ctx context.Context, consumerGroupHandler *consumer.Cons
 	config := sarama.NewConfig()
 	config.Version = sarama.V3_2_3_0
 	config.Consumer.Offsets.Initial = sarama.OffsetOldest
-	config.Consumer.Group.Session.Timeout = 3 * time.Second
+	config.Consumer.Group.Session.Timeout = 10 * time.Second
+	config.Consumer.Group.Heartbeat.Interval = 3 * time.Second
 
 	switch kafka.Assignor {
 	case "sticky":

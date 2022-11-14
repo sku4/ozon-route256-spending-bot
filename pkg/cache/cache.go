@@ -62,8 +62,8 @@ func init() {
 
 	lruCache = lru.NewLRU(size)
 	lruChan = make(chan lru.Item, size)
-	onceItemChan = make(chan OnceItem)
-	onceResultChan = make(chan OnceResult)
+	onceItemChan = make(chan OnceItem, 1)
+	onceResultChan = make(chan OnceResult, 1)
 }
 
 func Once(item *Item, do Do, metricName string) (err error) {
