@@ -18,6 +18,7 @@ import (
 	"gitlab.ozon.dev/skubach/workshop-1-bot/model/consumer"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/model/kafka"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/api"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/cache"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/logger"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -26,6 +27,7 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 )
 
 func main() {
@@ -80,6 +82,8 @@ func main() {
 
 	http.Handle("/metrics", promhttp.Handler())
 
+	cache.Run(ctx)
+
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
 
@@ -110,6 +114,7 @@ func startConsumerGroup(ctx context.Context, consumerGroupHandler *consumer.Cons
 	config := sarama.NewConfig()
 	config.Version = sarama.V3_2_3_0
 	config.Consumer.Offsets.Initial = sarama.OffsetOldest
+	config.Consumer.Group.Session.Timeout = 3 * time.Second
 
 	switch kafka.Assignor {
 	case "sticky":

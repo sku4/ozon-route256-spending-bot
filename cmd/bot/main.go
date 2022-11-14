@@ -22,6 +22,7 @@ import (
 	"gitlab.ozon.dev/skubach/workshop-1-bot/model/server"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/model/telegram/bot/client"
 	tg "gitlab.ozon.dev/skubach/workshop-1-bot/model/telegram/bot/server"
+	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/cache"
 	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/logger"
 	"os"
 	"os/signal"
@@ -78,6 +79,8 @@ func main() {
 			logger.Info(fmt.Sprintf("failed to close producer: %s", err.Error()))
 		}
 	}()
+
+	cache.Run(ctx)
 
 	repos, err := repository.NewRepository(db)
 	if err != nil {
