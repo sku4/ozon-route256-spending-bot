@@ -64,7 +64,8 @@ func TestLRU_Add_newElementWithFullQueueSync_clearAndPushToFront(t *testing.T) {
 	assert.Equal(t, "someKey2", backItem.Key)
 	assert.Equal(t, "56", backItem.Value)
 	assert.Equal(t, 3, lru.queue.Len())
-	assert.Nil(t, lru.Get("someKey1"))
+	v, _ := lru.Get("someKey1")
+	assert.Nil(t, v)
 }
 
 func TestLRU_Add_newElementSync_pushToFront(t *testing.T) {
@@ -108,9 +109,12 @@ func TestLRU_Add_newElementAsync_allKeysExists(t *testing.T) {
 	wg.Wait()
 
 	//Assert
-	assert.Equal(t, 8, lru.Get("someKey1"))
-	assert.Equal(t, "56", lru.Get("someKey2"))
-	assert.Equal(t, Item{"key", 7}, lru.Get("someKey3"))
+	v, _ := lru.Get("someKey1")
+	assert.Equal(t, 8, v)
+	v, _ = lru.Get("someKey2")
+	assert.Equal(t, "56", v)
+	v, _ = lru.Get("someKey3")
+	assert.Equal(t, Item{"key", 7}, v)
 	assert.Equal(t, 3, lru.queue.Len())
 }
 
@@ -122,7 +126,7 @@ func TestLRU_Get_hasElement_returnItAndMoveToFront(t *testing.T) {
 	lru.Add("someKey3", "90")
 
 	//Act
-	item := lru.Get("someKey2")
+	item, _ := lru.Get("someKey2")
 
 	//Assert
 	frontItem := lru.queue.Front().Value.(*Item)
@@ -143,7 +147,7 @@ func TestLRU_Get_hasNotElement_returnNil(t *testing.T) {
 	lru.Add("someKey3", "90")
 
 	//Act
-	item := lru.Get("someKey")
+	item, _ := lru.Get("someKey")
 
 	//Assert
 	frontItem := lru.queue.Front().Value.(*Item)
@@ -169,7 +173,8 @@ func TestLRU_Remove_hasElement_removeIt(t *testing.T) {
 	//Assert
 	frontItem := lru.queue.Front().Value.(*Item)
 	backItem := lru.queue.Back().Value.(*Item)
-	assert.Nil(t, lru.Get("someKey2"))
+	v, _ := lru.Get("someKey2")
+	assert.Nil(t, v)
 	assert.True(t, result)
 	assert.Equal(t, "someKey3", frontItem.Key)
 	assert.Equal(t, "90", frontItem.Value)
