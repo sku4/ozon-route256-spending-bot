@@ -51,17 +51,17 @@ func (c *LRU) Add(key string, value interface{}) bool {
 	return true
 }
 
-func (c *LRU) Get(key string) interface{} {
+func (c *LRU) Get(key string) (interface{}, bool) {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
 
 	element, exists := c.items[key]
 	if !exists {
-		return nil
+		return nil, exists
 	}
 
 	c.queue.MoveToFront(element)
-	return element.Value.(*Item).Value
+	return element.Value.(*Item).Value, exists
 }
 
 func (c *LRU) Remove(key string) bool {

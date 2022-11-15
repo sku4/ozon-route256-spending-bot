@@ -75,45 +75,36 @@ func Once(item *Item, do Do, metricName string) (err error) {
 		metricName: metricName,
 		resultCh:   onceResultChan,
 	}
+	t := time.NewTimer(limitCacheTime)
 
 	fromCache := "1"
-	fromLruCache := false
-	lruValue := lruCache.Get(item.Key)
-	if lruValue == nil {
-		onceResult := <-onceResultChan
+	select {
+	case onceResult := <-onceResultChan:
+		t.Stop()
 		if onceResult.err != nil {
 			return onceResult.err
 		}
 		fromCache = onceResult.fromCache
-	} else {
-		t := time.NewTimer(limitCacheTime)
-		select {
-		case onceResult := <-onceResultChan:
-			t.Stop()
+	case <-t.C:
+		if lruValue, ok := lruCache.Get(item.Key); ok {
+			e := cache.Unmarshal(lruValue.([]byte), item.Value)
+			if e != nil {
+				return e
+			}
+		} else {
+			onceResult := <-onceResultChan
 			if onceResult.err != nil {
 				return onceResult.err
 			}
 			fromCache = onceResult.fromCache
-		case <-t.C:
-			b, e := cache.Marshal(lruValue)
-			if e != nil {
-				return e
-			}
-			e = cache.Unmarshal(b, item.Value)
-			if e != nil {
-				return e
-			}
-			fromLruCache = true
 		}
 	}
 
 	cacheTotal.WithLabelValues(metricName, fromCache).Inc()
 
-	if !fromLruCache {
-		lruChan <- lru.Item{
-			Key:   item.Key,
-			Value: item.Value,
-		}
+	lruChan <- lru.Item{
+		Key:   item.Key,
+		Value: item.Value,
 	}
 
 	return
@@ -130,7 +121,8 @@ func addLruCache(ctx context.Context) {
 	for {
 		select {
 		case lruItem := <-lruChan:
-			lruCache.Add(lruItem.Key, lruItem.Value)
+			b, _ := cache.Marshal(lruItem.Value)
+			lruCache.Add(lruItem.Key, b)
 		case <-ctx.Done():
 			return
 		}
