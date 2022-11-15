@@ -37,7 +37,7 @@ func (c *LRU) Add(key string, value interface{}) bool {
 	}
 
 	if c.queue.Len() == c.capacity {
-		c.clear()
+		c.limitQueueCapacity()
 	}
 
 	item := &Item{
@@ -80,7 +80,7 @@ func (c *LRU) Len() int {
 	return len(c.items)
 }
 
-func (c *LRU) clear() {
+func (c *LRU) limitQueueCapacity() {
 	if element := c.queue.Back(); element != nil {
 		c.deleteItem(element)
 	}

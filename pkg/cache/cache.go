@@ -18,8 +18,9 @@ var (
 	lruCache       *lru.LRU
 	lruChan        chan lru.Item
 	onceItemChan   chan OnceItem
-	onceResultChan chan OnceResult
 	size           = 1000
+	bufferSize     = 10_000
+	workerCount    = 5
 	limitCacheTime = 500 * time.Millisecond
 	ttl            = time.Minute
 	cacheTotal     = promauto.NewCounterVec(
@@ -37,6 +38,7 @@ type OnceItem struct {
 	item       *Item
 	do         Do
 	metricName string
+	resultCh   chan OnceResult
 }
 
 type OnceResult struct {
@@ -61,16 +63,17 @@ func init() {
 	})
 
 	lruCache = lru.NewLRU(size)
-	lruChan = make(chan lru.Item, size)
-	onceItemChan = make(chan OnceItem, 1)
-	onceResultChan = make(chan OnceResult, 1)
+	lruChan = make(chan lru.Item, bufferSize)
+	onceItemChan = make(chan OnceItem, bufferSize)
 }
 
 func Once(item *Item, do Do, metricName string) (err error) {
+	onceResultChan := make(chan OnceResult)
 	onceItemChan <- OnceItem{
 		item:       item,
 		do:         do,
 		metricName: metricName,
+		resultCh:   onceResultChan,
 	}
 
 	fromCache := "1"
@@ -83,14 +86,23 @@ func Once(item *Item, do Do, metricName string) (err error) {
 		}
 		fromCache = onceResult.fromCache
 	} else {
+		t := time.NewTimer(limitCacheTime)
 		select {
 		case onceResult := <-onceResultChan:
+			t.Stop()
 			if onceResult.err != nil {
 				return onceResult.err
 			}
 			fromCache = onceResult.fromCache
-		case <-time.After(limitCacheTime):
-			item.Value = lruValue
+		case <-t.C:
+			b, e := cache.Marshal(lruValue)
+			if e != nil {
+				return e
+			}
+			e = cache.Unmarshal(b, item.Value)
+			if e != nil {
+				return e
+			}
 			fromLruCache = true
 		}
 	}
@@ -108,8 +120,10 @@ func Once(item *Item, do Do, metricName string) (err error) {
 }
 
 func Run(ctx context.Context) {
-	go addLruCache(ctx)
-	go onceWorker(ctx)
+	for w := 0; w < workerCount; w++ {
+		go addLruCache(ctx)
+		go onceWorker(ctx)
+	}
 }
 
 func addLruCache(ctx context.Context) {
@@ -133,7 +147,7 @@ func onceWorker(ctx context.Context) {
 				return onceItem.do(onceItem.item)
 			}
 			err := cache.Once((*redisCache.Item)(onceItem.item))
-			onceResultChan <- OnceResult{
+			onceItem.resultCh <- OnceResult{
 				fromCache: fromCache,
 				err:       err,
 			}
