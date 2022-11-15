@@ -102,10 +102,12 @@ func Once(item *Item, do Do, metricName string) (err error) {
 
 	cacheTotal.WithLabelValues(metricName, fromCache).Inc()
 
-	lruChan <- lru.Item{
-		Key:   item.Key,
-		Value: item.Value,
-	}
+	defer func() {
+		lruChan <- lru.Item{
+			Key:   item.Key,
+			Value: item.Value,
+		}
+	}()
 
 	return
 }
