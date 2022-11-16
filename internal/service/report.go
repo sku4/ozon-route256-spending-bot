@@ -2,11 +2,11 @@ package service
 
 import (
 	"context"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/rates"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/service/spending"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/model"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/api"
+	"github.com/sku4/ozon-route256-spending-bot/internal/repository"
+	"github.com/sku4/ozon-route256-spending-bot/internal/repository/postgres/rates"
+	"github.com/sku4/ozon-route256-spending-bot/internal/service/spending"
+	"github.com/sku4/ozon-route256-spending-bot/model"
+	"github.com/sku4/ozon-route256-spending-bot/pkg/api"
 	"time"
 )
 

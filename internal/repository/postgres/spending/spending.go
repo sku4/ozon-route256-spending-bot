@@ -7,11 +7,11 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/category"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/rates"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/model"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/cache"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/decimal"
+	"github.com/sku4/ozon-route256-spending-bot/internal/repository/postgres/category"
+	"github.com/sku4/ozon-route256-spending-bot/internal/repository/postgres/rates"
+	"github.com/sku4/ozon-route256-spending-bot/model"
+	"github.com/sku4/ozon-route256-spending-bot/pkg/cache"
+	"github.com/sku4/ozon-route256-spending-bot/pkg/decimal"
 	"time"
 )
 

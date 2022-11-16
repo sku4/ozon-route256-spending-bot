@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/category_limit"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/currency"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/model"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/decimal"
+	"github.com/sku4/ozon-route256-spending-bot/internal/repository/postgres/category_limit"
+	"github.com/sku4/ozon-route256-spending-bot/internal/repository/postgres/currency"
+	"github.com/sku4/ozon-route256-spending-bot/model"
+	"github.com/sku4/ozon-route256-spending-bot/pkg/decimal"
 	"sync"
 )
 

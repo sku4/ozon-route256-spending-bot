@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/category"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/model"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/decimal"
+	"github.com/sku4/ozon-route256-spending-bot/internal/repository/postgres/category"
+	"github.com/sku4/ozon-route256-spending-bot/model"
+	"github.com/sku4/ozon-route256-spending-bot/pkg/decimal"
 )
 
 type CategoryLimitSet interface {

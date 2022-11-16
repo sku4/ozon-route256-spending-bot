@@ -3,7 +3,7 @@ package consumer
 import (
 	"context"
 	"github.com/Shopify/sarama"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/handler/consumer"
+	"github.com/sku4/ozon-route256-spending-bot/internal/handler/consumer"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"

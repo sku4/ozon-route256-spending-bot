@@ -5,7 +5,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/handler/telegram"
+	"github.com/sku4/ozon-route256-spending-bot/internal/handler/telegram"
 )
 
 func TracingMiddleware(next telegram.IHandler) telegram.IHandler {

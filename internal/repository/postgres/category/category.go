@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/model"
+	"github.com/sku4/ozon-route256-spending-bot/model"
 )
 
 type Search interface {

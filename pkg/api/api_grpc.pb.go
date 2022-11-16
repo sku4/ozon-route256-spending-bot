@@ -8,7 +8,7 @@ package api
 
 import (
 	context "context"
-	report "gitlab.ozon.dev/skubach/workshop-1-bot/pkg/api/report"
+	report "github.com/sku4/ozon-route256-spending-bot/pkg/api/report"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"

@@ -3,7 +3,7 @@ package telegram
 import (
 	"context"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/service"
+	"github.com/sku4/ozon-route256-spending-bot/internal/service"
 )
 
 type IHandler interface {

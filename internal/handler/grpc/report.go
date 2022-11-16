@@ -2,8 +2,8 @@ package grpc
 
 import (
 	"context"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/api"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/api/report"
+	"github.com/sku4/ozon-route256-spending-bot/pkg/api"
+	"github.com/sku4/ozon-route256-spending-bot/pkg/api/report"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )

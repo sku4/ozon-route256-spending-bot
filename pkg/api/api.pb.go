@@ -8,7 +8,7 @@ package api
 
 import (
 	_ "github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2/options"
-	report "gitlab.ozon.dev/skubach/workshop-1-bot/pkg/api/report"
+	report "github.com/sku4/ozon-route256-spending-bot/pkg/api/report"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"

@@ -2,8 +2,8 @@ package rates
 
 import (
 	"context"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/model"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/decimal"
+	"github.com/sku4/ozon-route256-spending-bot/model"
+	"github.com/sku4/ozon-route256-spending-bot/pkg/decimal"
 )
 
 type Client interface {

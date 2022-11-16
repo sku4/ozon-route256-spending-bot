@@ -2,8 +2,8 @@ package grpc
 
 import (
 	"context"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/service"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/api"
+	"github.com/sku4/ozon-route256-spending-bot/internal/service"
+	"github.com/sku4/ozon-route256-spending-bot/pkg/api"
 )
 
 // Handler struct with grpc api server

@@ -7,8 +7,8 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/cache/lru"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/logger"
+	"github.com/sku4/ozon-route256-spending-bot/pkg/cache/lru"
+	"github.com/sku4/ozon-route256-spending-bot/pkg/logger"
 	"os"
 	"time"
 )
@@ -16,7 +16,6 @@ import (
 var (
 	cache          *redisCache.Cache
 	lruCache       *lru.LRU
-	lruChan        chan lru.Item
 	onceItemChan   chan OnceItem
 	size           = 1000
 	bufferSize     = 10_000
@@ -63,7 +62,6 @@ func init() {
 	})
 
 	lruCache = lru.NewLRU(size)
-	lruChan = make(chan lru.Item, bufferSize)
 	onceItemChan = make(chan OnceItem, bufferSize)
 }
 
@@ -102,32 +100,17 @@ func Once(item *Item, do Do, metricName string) (err error) {
 
 	cacheTotal.WithLabelValues(metricName, fromCache).Inc()
 
-	defer func() {
-		lruChan <- lru.Item{
-			Key:   item.Key,
-			Value: item.Value,
-		}
-	}()
+	go func(item *Item) {
+		b, _ := cache.Marshal(item.Value)
+		lruCache.Add(item.Key, b)
+	}(item)
 
 	return
 }
 
 func Run(ctx context.Context) {
 	for w := 0; w < workerCount; w++ {
-		go addLruCache(ctx)
 		go onceWorker(ctx)
-	}
-}
-
-func addLruCache(ctx context.Context) {
-	for {
-		select {
-		case lruItem := <-lruChan:
-			b, _ := cache.Marshal(lruItem.Value)
-			lruCache.Add(lruItem.Key, b)
-		case <-ctx.Done():
-			return
-		}
 	}
 }
 

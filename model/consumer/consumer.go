@@ -2,9 +2,9 @@ package consumer
 
 import (
 	"github.com/Shopify/sarama"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/handler/consumer"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/service"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/logger"
+	"github.com/sku4/ozon-route256-spending-bot/internal/handler/consumer"
+	"github.com/sku4/ozon-route256-spending-bot/internal/service"
+	"github.com/sku4/ozon-route256-spending-bot/pkg/logger"
 )
 
 type Consumer struct {

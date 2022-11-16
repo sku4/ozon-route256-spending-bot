@@ -15,7 +15,7 @@ import (
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/utilities"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/api/report"
+	"github.com/sku4/ozon-route256-spending-bot/pkg/api/report"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/grpclog"

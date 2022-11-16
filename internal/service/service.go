@@ -4,11 +4,11 @@ import (
 	"context"
 	"github.com/Shopify/sarama"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/repository/postgres/rates"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/service/middleware"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/service/spending"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/model/telegram/bot/client"
+	"github.com/sku4/ozon-route256-spending-bot/internal/repository"
+	"github.com/sku4/ozon-route256-spending-bot/internal/repository/postgres/rates"
+	"github.com/sku4/ozon-route256-spending-bot/internal/service/middleware"
+	"github.com/sku4/ozon-route256-spending-bot/internal/service/spending"
+	"github.com/sku4/ozon-route256-spending-bot/model/telegram/bot/client"
 	"time"
 )
 

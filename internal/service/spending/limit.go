@@ -5,9 +5,9 @@ import (
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/pkg/errors"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/model/telegram/bot/client"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/decimal"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/user"
+	"github.com/sku4/ozon-route256-spending-bot/model/telegram/bot/client"
+	"github.com/sku4/ozon-route256-spending-bot/pkg/decimal"
+	"github.com/sku4/ozon-route256-spending-bot/pkg/user"
 	"strconv"
 )
 

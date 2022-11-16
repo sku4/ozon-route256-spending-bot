@@ -3,8 +3,8 @@ package server
 import (
 	"context"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/internal/handler/telegram"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/logger"
+	"github.com/sku4/ozon-route256-spending-bot/internal/handler/telegram"
+	"github.com/sku4/ozon-route256-spending-bot/pkg/logger"
 )
 
 type Server struct {

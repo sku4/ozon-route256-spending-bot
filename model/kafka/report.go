@@ -1,7 +1,7 @@
 package kafka
 
 import (
-	"gitlab.ozon.dev/skubach/workshop-1-bot/model"
+	"github.com/sku4/ozon-route256-spending-bot/model"
 	"time"
 )
 

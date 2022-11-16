@@ -1,4 +1,4 @@
-module gitlab.ozon.dev/skubach/workshop-1-bot
+module github.com/sku4/ozon-route256-spending-bot
 
 go 1.19
 

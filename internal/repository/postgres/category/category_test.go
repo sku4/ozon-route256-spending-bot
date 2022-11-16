@@ -4,9 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"github.com/jmoiron/sqlx"
+	"github.com/sku4/ozon-route256-spending-bot/model"
 	"github.com/stretchr/testify/assert"
 	sqlmock "github.com/zhashkevych/go-sqlxmock"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/model"
 	"testing"
 )
 

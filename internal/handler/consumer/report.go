@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/Shopify/sarama"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/model/kafka"
-	"gitlab.ozon.dev/skubach/workshop-1-bot/pkg/logger"
+	"github.com/sku4/ozon-route256-spending-bot/model/kafka"
+	"github.com/sku4/ozon-route256-spending-bot/pkg/logger"
 )
 
 func (h *Handler) ReportMessage(ctx context.Context, msg *sarama.ConsumerMessage) (err error) {
